@@ -171,4 +171,5 @@ class SettingsDialog(QDialog):
             self.llm_model.text(),
             self.api_key.text()
         )
+        self.indexer.reload_tagger() # Reload tagger with new config
         super().accept()

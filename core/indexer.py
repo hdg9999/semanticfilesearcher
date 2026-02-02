@@ -56,6 +56,11 @@ class SemanticIndexer:
             adapter = OllamaAdapter(model=model)
             
         self.tagger = AutoTagger(adapter=adapter)
+        print(f"Tagger initialized with provider: {provider}, model: {model}")
+
+    def reload_tagger(self):
+        print("Reloading tagger...")
+        self._init_tagger()
 
     def index_folder(self, folder_path):
         if folder_path not in self.config.get_folders():
@@ -139,9 +144,12 @@ class SemanticIndexer:
                             print(f"[Worker] Processing update: {task.path}")
                             self.scanner.process_file(task.path)
                             # 태그 생성
-                            tags = self.tagger.generate_tags(task.path, self.db.get_all_tags())
-                            for tag in tags:
-                                self.db.link_file_tag(task.path, tag)
+                            try:
+                                tags = self.tagger.generate_tags(task.path, self.db.get_all_tags())
+                                for tag in tags:
+                                    self.db.link_file_tag(task.path, tag)
+                            except Exception as e:
+                                print(f"[Worker] Tag generation failed for {task.path}: {e}")
                         else:
                              print(f"[Worker] File not found (skipping): {task.path}")
 

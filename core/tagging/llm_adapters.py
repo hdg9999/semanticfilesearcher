@@ -32,13 +32,15 @@ class OpenAIAdapter(LLMAdapter):
 
 class GeminiAdapter(LLMAdapter):
     def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model)
+        from google import genai
+        self.client = genai.Client(api_key=api_key)
+        self.model = model
 
     def generate_keywords(self, content_description, existing_tags):
         prompt = f"내용: {content_description}\n기존 태그: {', '.join(existing_tags)}\n적절한 태그 3개를 콤마로 구분해서 답변해줘."
-        response = self.model.generate_content(prompt)
+        response = self.client.models.generate_content(
+            model=self.model, contents=prompt
+        )
         return [t.strip() for t in response.text.split(',') if t.strip()]
 
 class OllamaAdapter(LLMAdapter):

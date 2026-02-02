@@ -16,8 +16,15 @@ class AutoTagger:
         desc = self._get_content_summary(file_path)
         
         # 2. 어댑터를 통한 키워드 생성
-        tags = self.adapter.generate_keywords(desc, existing_tags)
-        return tags
+        # 2. 어댑터를 통한 키워드 생성
+        print(f"[AutoTagger] Generating tags for {file_path} using {self.adapter.__class__.__name__}")
+        try:
+            tags = self.adapter.generate_keywords(desc, existing_tags)
+            print(f"[AutoTagger] Generated tags: {tags}")
+            return tags
+        except Exception as e:
+            print(f"[AutoTagger] Error generating tags: {e}")
+            return []
 
     def _get_content_summary(self, file_path):
         # 파일명과 확장자 기반의 간단한 요약 (실제로는 문서 일부 추출 가능)

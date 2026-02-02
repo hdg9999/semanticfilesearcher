@@ -42,3 +42,12 @@
 - `ui/tag_dialog.py`: 파일별 태그 선택 및 신규 태그 추가를 위한 전용 다이얼로그(TagSelectionDialog) 추가.
 - `ui/settings_dialog.py`: 태그 관리 탭(전역 태그 추가/삭제/이름변경) 구현 및 LLM 설정 실시간 저장 로직 추가.
 - `ui/main_window.py` 및 `ui/components/result_item.py`: 검색 결과 리스트에서 컨텍스트 메뉴를 통한 '태그 관리' 기능 연동.
+
+## [2026-02-02] 태그 자동생성 엔진 개선
+- `core/indexer.py`: 런타임 설정 변경 시 태그 생성기(Tagger)를 재초기화하는 `reload_tagger` 기능 추가.
+- `ui/settings_dialog.py`: 설정 저장 시점에 자동으로 `reload_tagger`를 호출하여 LLM 설정 변경 사항 즉시 반영.
+- `core/tagging/auto_tagger.py`: 태그 생성 실패 시 예외 처리 및 디버깅용 로그 출력 강화.
+
+## [2026-02-02] LLM 패키지 마이그레이션
+- Deprecated 된 `google-generativeai` 패키지를 최신 `google-genai` 패키지로 의존성 교체.
+- `GeminiAdapter`를 `google-genai` SDK 인터페이스에 맞춰 리팩토링.
