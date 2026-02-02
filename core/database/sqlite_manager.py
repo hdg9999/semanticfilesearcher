@@ -160,3 +160,12 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM files WHERE file_path = ?", (file_path,))
             conn.commit()
+
+    def get_file_metadata(self, file_path):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT last_modified FROM files WHERE file_path = ?", (file_path,))
+            row = cursor.fetchone()
+            if row:
+                return {"last_modified": row[0]}
+            return None

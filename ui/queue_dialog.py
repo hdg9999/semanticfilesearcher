@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QListWidget, QListWidgetItem, 
-                               QLabel, QPushButton, QHBoxLayout, QFrame)
+                               QLabel, QPushButton, QHBoxLayout, QFrame, QWidget)
 from PySide6.QtCore import QTimer, Qt
 from ui.components.spinner import LoadingSpinner
 import time
@@ -10,8 +10,39 @@ class QueueStatusDialog(QDialog):
         self.queue_manager = queue_manager
         self.setWindowTitle("Indexing Queue Status")
         self.resize(500, 450)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setStyleSheet("border: 1px solid #444444; background-color: #2b2b2b;")
         
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Custom Header
+        header = QWidget()
+        header.setStyleSheet("background-color: #1e1e1e; border-bottom: 1px solid #333333;")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(10, 5, 10, 5)
+        
+        title = QLabel("Indexing Queue")
+        title.setStyleSheet("font-weight: bold; border: none;")
+        header_layout.addWidget(title)
+        
+        header_layout.addStretch()
+        
+        close_btn_header = QPushButton("X")
+        close_btn_header.setFixedSize(24, 24)
+        close_btn_header.setStyleSheet("""
+            QPushButton { background-color: transparent; border: none; font-weight: bold; color: #aaaaaa; }
+            QPushButton:hover { color: white; background-color: #c42b1c; }
+        """)
+        close_btn_header.clicked.connect(self.close)
+        header_layout.addWidget(close_btn_header)
+        
+        layout.addWidget(header)
+        
+        # Content Container (to add margins for the rest)
+        content_widget = QWidget()
+        content_widget.setStyleSheet("border: none;")
+        content_layout = QVBoxLayout(content_widget)
         
         # Current Processing Section
         current_layout = QHBoxLayout()
@@ -22,19 +53,21 @@ class QueueStatusDialog(QDialog):
         
         current_layout.addWidget(self.spinner)
         current_layout.addWidget(self.current_label)
+        current_layout.addWidget(self.current_label)
         current_layout.addStretch()
-        layout.addLayout(current_layout)
+        content_layout.addLayout(current_layout)
         
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
-        layout.addWidget(line)
+        line.setFrameShadow(QFrame.Sunken)
+        content_layout.addWidget(line)
         
         self.status_label = QLabel("Loading...")
-        layout.addWidget(self.status_label)
+        content_layout.addWidget(self.status_label)
         
         self.list_widget = QListWidget()
-        layout.addWidget(self.list_widget)
+        content_layout.addWidget(self.list_widget)
         
         btn_layout = QHBoxLayout()
         self.refresh_btn = QPushButton("Refresh")
@@ -46,7 +79,9 @@ class QueueStatusDialog(QDialog):
         btn_layout.addStretch()
         btn_layout.addWidget(self.refresh_btn)
         btn_layout.addWidget(self.close_btn)
-        layout.addLayout(btn_layout)
+        content_layout.addLayout(btn_layout)
+        
+        layout.addWidget(content_widget)
         
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh_list)

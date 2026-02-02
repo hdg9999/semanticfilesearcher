@@ -28,21 +28,74 @@ class FileScanner:
         mtime = os.path.getmtime(file_path)
         last_modified = datetime.fromtimestamp(mtime)
 
-        # 1. 텍스트/이미지 추출 및 임베딩 생성
-        embedding = None
-        if self._is_supported(ext, 'text') or self._is_supported(ext, 'document'):
-            text = self.extract_text(file_path)
-            if text:
-                embedding = self.embedding_adapter.encode_text(text[:5000]) # 상위 5000자만 우선 처리
-        elif self._is_supported(ext, 'image'):
-            embedding = self.embedding_adapter.encode_image(file_path)
+        # 0. 변경 여부 확인 (중복 인덱싱 방지)
+        db_metadata = self.db_manager.get_file_metadata(file_path)
+        if db_metadata:
+            stored_last_modified_str = db_metadata.get("last_modified")
+            # SQLite stores datetime as string usually, need to parse if it's string
+            # But here let's rely on strict comparison or string comparison if format is consistent
+            # Python sqlite3 adapter might return datetime object if configured, but let's be safe.
+            # Assuming standard string format "YYYY-MM-DD HH:MM:SS..."
+            
+            # Simple string comparison might work if formats are identical.
+            # Let's try to parse if needed, or compare string representation of current time.
+            # Actually, `upsert_file` passes a datetime object. SQLite adapter handles conversion.
+            # When reading back, it might be string.
+            
+            # Let's simplify: Compare timestamp if possible or string. 
+            # Ideally we check if abs(stored - current) < threshold.
+            # For now, let's just convert current to string and compare, or parse stored.
+            
+            # Note: sqlite_manager uses `last_modified` from arguments directly.
+            # Let's fetch what we just read.
+            pass
 
-        # 2. DB 업데이트
-        if embedding is not None:
-            file_id = self.db_manager.upsert_file(file_path, last_modified)
-            if self.vector_db_manager:
-                self.vector_db_manager.add_vectors(embedding, [file_path])
-            print(f"Indexed: {file_path}")
+        # To avoid timezone/format complexity, let's re-fetch the robust way or just do a quick check.
+        # If we use string comparison, we need to ensure format matches DB's default.
+        # Let's compare timestamps.
+        
+        should_process = True
+        if db_metadata:
+             stored_modified = db_metadata['last_modified']
+             # If stored_modified is string, parse it.
+             if isinstance(stored_modified, str):
+                 try:
+                    # SQLite default format: "YYYY-MM-DD HH:MM:SS.mmmmmm" or similar
+                    stored_dt = datetime.fromisoformat(stored_modified)
+                    # OR specific format? sqlite3 defaults to "YYYY-MM-DD HH:MM:SS.uuuuuu" usually
+                    # Let's try flexible parsing or string matching.
+                    # Since we are writing `last_modified` (datetime) into DB, 
+                    # check how it's stored. `upsert_file` takes `last_modified`.
+                    pass
+                 except:
+                    pass
+             
+             # Actually, simpler: Let's assume strict string equality if we format it same way,
+             # OR just proceed if not sure. 
+             # But better: Check if file size also changed? (Not stored currently).
+             
+             # Let's proceed with a standard comparison allowing for small drift or string match.
+             # If `stored_modified` == `str(last_modified)`, skip.
+             if str(stored_modified) == str(last_modified):
+                 should_process = False
+                 print(f"Skipped (Unchanged): {file_path}")
+
+        if should_process:
+            # 1. 텍스트/이미지 추출 및 임베딩 생성
+            embedding = None
+            if self._is_supported(ext, 'text') or self._is_supported(ext, 'document'):
+                text = self.extract_text(file_path)
+                if text:
+                    embedding = self.embedding_adapter.encode_text(text[:5000]) # 상위 5000자만 우선 처리
+            elif self._is_supported(ext, 'image'):
+                embedding = self.embedding_adapter.encode_image(file_path)
+    
+            # 2. DB 업데이트
+            if embedding is not None:
+                file_id = self.db_manager.upsert_file(file_path, last_modified)
+                if self.vector_db_manager:
+                    self.vector_db_manager.add_vectors(embedding, [file_path])
+                print(f"Indexed: {file_path}")
 
     def extract_text(self, file_path):
         ext = os.path.splitext(file_path)[1].lower()

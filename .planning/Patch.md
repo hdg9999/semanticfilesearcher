@@ -51,3 +51,10 @@
 ## [2026-02-02] LLM 패키지 마이그레이션
 - Deprecated 된 `google-generativeai` 패키지를 최신 `google-genai` 패키지로 의존성 교체.
 - `GeminiAdapter`를 `google-genai` SDK 인터페이스에 맞춰 리팩토링.
+
+## [2026-02-02] 파일 감지 및 인덱싱 로직 최적화 (File Detection Logic Optimization)
+- **중복/불필요 인덱싱 방지**
+    - `core/database/sqlite_manager.py`: 메타데이터 조회 API (`get_file_metadata`) 추가.
+    - `core/indexing/scanner.py`: 파일 처리(`process_file`) 시 DB에 저장된 수정 시간과 비교하여 변경이 없는 경우 **임베딩 생성 및 DB 업데이트 생략**.
+    - `core/indexer.py`: 변경 감지 이벤트(`modified`) 수신 시 **큐에 작업을 추가하기 전에** DB 메타데이터를 확인하여, 단순 파일 액세스(Read)로 인한 **불필요한 대기열 진입 차단**.
+- **검증**: `tests/test_file_skip.py` 및 `tests/test_queue_skip.py`를 통해 시나리오별(최초, 변경 없음, 내용 변경) 동작 검증 완료.

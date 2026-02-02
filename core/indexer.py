@@ -10,6 +10,7 @@ from core.indexing.queue_manager import IndexingQueueManager
 import os
 import threading
 import time
+from datetime import datetime
 
 class SemanticIndexer:
     def __init__(self, data_dir="data"):
@@ -125,7 +126,23 @@ class SemanticIndexer:
 
     def _on_change(self, file_path, action):
         # Watchdog 이벤트 -> 우선순위 큐로 전달
+        # Watchdog 이벤트 -> 우선순위 큐로 전달
         if action in ["created", "modified"]:
+            # 단순 읽기 등으로 인한 중복 감지 방지
+            # DB에 저장된 시간과 현재 파일 시간이 같으면 큐에 추가하지 않음
+            if os.path.exists(file_path):
+                current_mtime = os.path.getmtime(file_path)
+                last_modified = datetime.fromtimestamp(current_mtime)
+                
+                db_metadata = self.db.get_file_metadata(file_path)
+                if db_metadata:
+                    stored_modified = db_metadata.get('last_modified')
+                    # 저장된 시간과 현재 시간이 같으면 무시
+                    # (Scanner 내부에서도 체크하지만, 큐 진입 자체를 막기 위함)
+                    if str(stored_modified) == str(last_modified):
+                        # print(f"Ignored event (Unchanged): {file_path}")
+                        return
+
             self.queue_manager.add_task(file_path, "update")
         elif action == "deleted":
             self.queue_manager.add_task(file_path, "deleted")

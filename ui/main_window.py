@@ -3,11 +3,12 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QFileDialog, QListWidgetItem, QMessageBox, QProgressBar,
                              QComboBox, QScrollArea, QFrame)
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer
-from PySide6.QtGui import QFont, QAction, QDesktopServices
+from PySide6.QtGui import QFont, QAction, QDesktopServices, QIcon, QPixmap
 from ui.workers import IndexingWorker
 from ui.settings_dialog import SettingsDialog
 from ui.components.result_item import FileResultWidget
 from ui.components.detail_pane import DetailPane
+from ui.components.badged_button import BadgedButton
 import os
 
 class MainWindow(QMainWindow):
@@ -39,18 +40,13 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(title_label)
         header_layout.addStretch()
         
-        self.view_list_btn = QPushButton("목록형")
-        self.view_icon_btn = QPushButton("아이콘형")
-        self.view_list_btn.setCheckable(True)
-        self.view_icon_btn.setCheckable(True)
-        self.view_list_btn.setChecked(True)
-        self.view_list_btn.clicked.connect(lambda: self.set_view_mode("list"))
-        self.view_icon_btn.clicked.connect(lambda: self.set_view_mode("icon"))
+        # 대기열 버튼 (헤더 우측 상단으로 이동)
+        self.queue_btn = BadgedButton(QIcon("ui/resources/icons/queue_white.svg"))
+        self.queue_btn.setFixedSize(40, 40)
+        self.queue_btn.setIconSize(QSize(24, 24))
+        self.queue_btn.clicked.connect(self.show_queue_status)
+        header_layout.addWidget(self.queue_btn)
         
-        view_layout = QHBoxLayout()
-        view_layout.addWidget(self.view_list_btn)
-        view_layout.addWidget(self.view_icon_btn)
-        header_layout.addLayout(view_layout)
         top_layout.addLayout(header_layout)
 
         # 2행: 검색 바 및 필터
@@ -79,6 +75,33 @@ class MainWindow(QMainWindow):
         top_layout.addLayout(search_layout)
         
         main_layout.addWidget(top_container)
+
+        # 3행: 뷰 모드 컨트롤 바 (검색 모드 아래, 결과창 위)
+        control_container = QWidget()
+        control_layout = QHBoxLayout(control_container)
+        control_layout.setContentsMargins(20, 5, 20, 5)
+        
+        self.view_list_btn = QPushButton()
+        self.view_list_btn.setIcon(QIcon("ui/resources/icons/list_view_white.svg"))
+        self.view_list_btn.setCheckable(True)
+        self.view_list_btn.setFixedSize(32, 32)
+        self.view_list_btn.setToolTip("목록형 보기")
+        
+        self.view_icon_btn = QPushButton()
+        self.view_icon_btn.setIcon(QIcon("ui/resources/icons/icon_view_white.svg"))
+        self.view_icon_btn.setCheckable(True)
+        self.view_list_btn.setChecked(True) # Default
+        self.view_icon_btn.setFixedSize(32, 32)
+        self.view_icon_btn.setToolTip("아이콘형 보기")
+        
+        self.view_list_btn.clicked.connect(lambda: self.set_view_mode("list"))
+        self.view_icon_btn.clicked.connect(lambda: self.set_view_mode("icon"))
+        
+        control_layout.addWidget(self.view_list_btn)
+        control_layout.addWidget(self.view_icon_btn)
+        control_layout.addStretch()
+        
+        main_layout.addWidget(control_container)
 
         # 중간 영역 (결과 리스트 + 상세 정보 패널)
         content_area = QHBoxLayout()
@@ -119,11 +142,10 @@ class MainWindow(QMainWindow):
         
         status_layout.addStretch()
         
-        self.queue_btn = QPushButton("대기열: 0")
-        self.queue_btn.setFlat(True)
-        self.queue_btn.setStyleSheet("color: #aaaaaa; font-size: 12px; text-align: right;")
-        self.queue_btn.clicked.connect(self.show_queue_status)
-        status_layout.addWidget(self.queue_btn)
+        
+        # Bottom Queue Button removed (moved to header)
+        # self.queue_btn = QPushButton("대기열: 0")
+        # ...
         
         main_layout.addWidget(status_container)
 
@@ -139,11 +161,7 @@ class MainWindow(QMainWindow):
         # Indexer가 초기화되지 않았거나 큐 매니저가 없으면 패스
         if hasattr(self.indexer, 'queue_manager'):
             size = self.indexer.queue_manager.get_queue_size()
-            self.queue_btn.setText(f"대기열: {size}")
-            if size > 0:
-                self.queue_btn.setStyleSheet("color: #FFA500; font-weight: bold; font-size: 12px;") # Orange for active
-            else:
-                self.queue_btn.setStyleSheet("color: #aaaaaa; font-size: 12px;")
+            self.queue_btn.set_badge_count(size)
 
     def show_queue_status(self):
         from ui.queue_dialog import QueueStatusDialog
