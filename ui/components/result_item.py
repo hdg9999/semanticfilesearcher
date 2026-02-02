@@ -20,7 +20,11 @@ class FileResultWidget(QFrame):
 
     def _setup_ui(self):
         self.setObjectName("fileResult")
-        layout = QHBoxLayout(self) if self.view_mode == "list" else QVBoxLayout(self)
+        if self.view_mode == "list":
+            layout = QHBoxLayout(self)
+        else:
+            layout = QVBoxLayout(self)
+        
         layout.setContentsMargins(10, 5, 10, 5)
         
         # 파일 아이콘 (시스템 아이콘 사용)
@@ -38,16 +42,22 @@ class FileResultWidget(QFrame):
         info_layout = QVBoxLayout()
         self.name_label = QLabel(self.file_name)
         self.name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
-        info_layout.addWidget(self.name_label)
         
         if self.view_mode == "list":
+            info_layout.addWidget(self.name_label)
             self.path_label = QLabel(self.file_path)
             self.path_label.setStyleSheet("color: #888888; font-size: 11px;")
             info_layout.addWidget(self.path_label)
             layout.addLayout(info_layout, stretch=1)
         else:
+            # 아이콘 모드 설정
+            self.setFixedSize(120, 140)
+            self.name_label.setAlignment(Qt.AlignCenter)
+            self.name_label.setWordWrap(True) # 긴 파일명 줄바꿈
+            self.name_label.setStyleSheet("font-size: 12px;") # 폰트 크기 조정
+            info_layout.addWidget(self.name_label)
             layout.addLayout(info_layout)
-
+            
         # 호버 버튼 (기본 숨김)
         self.actions_widget = QWidget()
         actions_layout = QHBoxLayout(self.actions_widget)
@@ -64,7 +74,7 @@ class FileResultWidget(QFrame):
         actions_layout.addWidget(self.open_folder_btn)
         actions_layout.addWidget(self.more_btn)
         self.actions_widget.setVisible(False)
-        layout.addWidget(self.actions_widget)
+        layout.addWidget(self.actions_widget, alignment=Qt.AlignCenter)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:

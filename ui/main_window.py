@@ -185,11 +185,19 @@ class MainWindow(QMainWindow):
         results = self.indexer.search(query, mode=mode, extensions=exts)
         
         # 결과 렌더링
-        # 기존 결과 제거
-        while self.result_layout.count():
-            item = self.result_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        # 뷰 모드에 따라 컨테이너 및 레이아웃 설정
+        from ui.components.flow_layout import FlowLayout
+
+        new_container = QWidget()
+        if self.view_mode == "list":
+            self.result_layout = QVBoxLayout(new_container)
+            self.result_layout.setAlignment(Qt.AlignTop)
+        else:
+            self.result_layout = FlowLayout(new_container)
+            
+        # 기존 스크롤 영역 위젯 교체 (자동으로 이전 위젯은 삭제됨)
+        self.scroll_area.setWidget(new_container)
+        self.result_container = new_container # 참조 업데이트
         
         for res in results:
             path = res['file_path']

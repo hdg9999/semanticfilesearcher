@@ -66,3 +66,10 @@
     - `core/config.py`: `Base URL` 값의 저장 및 로드 로직 구현.
     - `core/tagging/llm_adapters.py`: OpenAI 및 Ollama 어댑터가 사용자 정의 `Base URL`을 지원하도록 개선 (로컬 LLM, 프록시 등 다양한 환경 지원).
     - `core/indexer.py`: 인덱서 초기화 시 설정된 `Base URL`을 어댑터에 전달하도록 연동.
+
+## [2026-02-03] 아이콘 보기 모드 레이아웃 개선 (Icon View Improvement)
+- **반응형 그리드 레이아웃(FlowLayout) 도입**
+    - `ui/components/flow_layout.py`: 창 크기에 따라 아이템을 자동으로 줄바꿈하여 배치하는 커스텀 레이아웃 구현.
+    - `ui/main_window.py`: 보기 모드 전환(List/Icon)에 따라 `QVBoxLayout`과 `FlowLayout`을 동적으로 교체하는 로직 적용.
+- **아이콘 뷰 스타일 개선**
+    - `ui/components/result_item.py` 수정: 아이콘 모드 시 고정 크기(120x140) 적용 및 파일명 중앙 정렬, 줄바꿈 처리.
