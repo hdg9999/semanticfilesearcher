@@ -58,3 +58,11 @@
     - `core/indexing/scanner.py`: 파일 처리(`process_file`) 시 DB에 저장된 수정 시간과 비교하여 변경이 없는 경우 **임베딩 생성 및 DB 업데이트 생략**.
     - `core/indexer.py`: 변경 감지 이벤트(`modified`) 수신 시 **큐에 작업을 추가하기 전에** DB 메타데이터를 확인하여, 단순 파일 액세스(Read)로 인한 **불필요한 대기열 진입 차단**.
 - **검증**: `tests/test_file_skip.py` 및 `tests/test_queue_skip.py`를 통해 시나리오별(최초, 변경 없음, 내용 변경) 동작 검증 완료.
+
+## [2026-02-03] 검색 결과 UI 개선 및 LLM 설정 고도화
+- **UI 개선**: `ui/components/result_item.py`에서 `QFileIconProvider`를 도입하여 검색 결과의 파일 아이콘을 시스템 기본 아이콘으로 변경, 사용자 경험 개선.
+- **LLM 설정 고도화**:
+    - `ui/settings_dialog.py`: 설정 창에 `Base URL` 입력 필드 추가.
+    - `core/config.py`: `Base URL` 값의 저장 및 로드 로직 구현.
+    - `core/tagging/llm_adapters.py`: OpenAI 및 Ollama 어댑터가 사용자 정의 `Base URL`을 지원하도록 개선 (로컬 LLM, 프록시 등 다양한 환경 지원).
+    - `core/indexer.py`: 인덱서 초기화 시 설정된 `Base URL`을 어댑터에 전달하도록 연동.
