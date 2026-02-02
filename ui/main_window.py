@@ -1,0 +1,262 @@
+from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+                             QLineEdit, QPushButton, QListWidget, QLabel, 
+                             QFileDialog, QListWidgetItem, QMessageBox, QProgressBar,
+                             QComboBox, QScrollArea, QFrame)
+from PySide6.QtCore import Qt, QSize, QUrl, QTimer
+from PySide6.QtGui import QFont, QAction, QDesktopServices
+from ui.workers import IndexingWorker
+from ui.settings_dialog import SettingsDialog
+from ui.components.result_item import FileResultWidget
+from ui.components.detail_pane import DetailPane
+import os
+
+class MainWindow(QMainWindow):
+    def __init__(self, indexer):
+        super().__init__()
+        self.indexer = indexer
+        self.setWindowTitle("Semantic File Searcher")
+        self.resize(1200, 850)
+        
+        self.worker = None
+        self.view_mode = "list"
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # 상단 도구 모음 및 검색 바 영역
+        top_container = QWidget()
+        top_container.setStyleSheet("background-color: #1e1e1e; border-bottom: 1px solid #333333;")
+        top_layout = QVBoxLayout(top_container)
+        top_layout.setContentsMargins(20, 10, 20, 10)
+
+        # 1행: 타이틀 및 작업 버튼
+        header_layout = QHBoxLayout()
+        title_label = QLabel("Semantic Search")
+        title_label.setFont(QFont("Segoe UI", 20, QFont.Bold))
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
+        
+        self.view_list_btn = QPushButton("목록형")
+        self.view_icon_btn = QPushButton("아이콘형")
+        self.view_list_btn.setCheckable(True)
+        self.view_icon_btn.setCheckable(True)
+        self.view_list_btn.setChecked(True)
+        self.view_list_btn.clicked.connect(lambda: self.set_view_mode("list"))
+        self.view_icon_btn.clicked.connect(lambda: self.set_view_mode("icon"))
+        
+        view_layout = QHBoxLayout()
+        view_layout.addWidget(self.view_list_btn)
+        view_layout.addWidget(self.view_icon_btn)
+        header_layout.addLayout(view_layout)
+        top_layout.addLayout(header_layout)
+
+        # 2행: 검색 바 및 필터
+        search_layout = QHBoxLayout()
+        
+        self.search_mode = QComboBox()
+        self.search_mode.addItems(["통합 검색", "텍스트 검색", "이미지 검색", "태그 검색"])
+        self.search_mode.setFixedWidth(120)
+        
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("검색어를 입력하세요...")
+        self.search_input.returnPressed.connect(self.perform_search)
+        
+        self.ext_filter = QLineEdit()
+        self.ext_filter.setPlaceholderText("확장자 필터 (예: txt, pdf)")
+        self.ext_filter.setFixedWidth(150)
+        
+        self.clear_ext_btn = QPushButton("✕")
+        self.clear_ext_btn.setFixedWidth(30)
+        self.clear_ext_btn.clicked.connect(lambda: self.ext_filter.clear())
+        
+        search_layout.addWidget(self.search_mode)
+        search_layout.addWidget(self.search_input, stretch=1)
+        search_layout.addWidget(self.ext_filter)
+        search_layout.addWidget(self.clear_ext_btn)
+        top_layout.addLayout(search_layout)
+        
+        main_layout.addWidget(top_container)
+
+        # 중간 영역 (결과 리스트 + 상세 정보 패널)
+        content_area = QHBoxLayout()
+        
+        # 결과 리스트 (Scroll Area 사용)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setStyleSheet("border: none; background-color: #252526;")
+        
+        self.result_container = QWidget()
+        self.result_layout = QVBoxLayout(self.result_container)
+        self.result_layout.setAlignment(Qt.AlignTop)
+        self.scroll_area.setWidget(self.result_container)
+        
+        content_area.addWidget(self.scroll_area, stretch=1)
+        
+        # 상세 정보 패널
+        self.detail_pane = DetailPane()
+        content_area.addWidget(self.detail_pane)
+        
+        main_layout.addLayout(content_area)
+
+        # 하단 상태 바
+        status_container = QWidget()
+        status_container.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #333333;")
+        status_layout = QHBoxLayout(status_container) # QV -> QH for button
+        status_layout.setContentsMargins(10, 5, 10, 5)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setFixedHeight(8)
+        self.progress_bar.setFixedWidth(200) # Fixed width
+        status_layout.addWidget(self.progress_bar)
+        
+        self.status_label = QLabel("준비 완료")
+        self.status_label.setStyleSheet("color: #aaaaaa; font-size: 12px;")
+        status_layout.addWidget(self.status_label)
+        
+        status_layout.addStretch()
+        
+        self.queue_btn = QPushButton("대기열: 0")
+        self.queue_btn.setFlat(True)
+        self.queue_btn.setStyleSheet("color: #aaaaaa; font-size: 12px; text-align: right;")
+        self.queue_btn.clicked.connect(self.show_queue_status)
+        status_layout.addWidget(self.queue_btn)
+        
+        main_layout.addWidget(status_container)
+
+        self._create_menu_bar()
+        self.check_initial_indexing()
+        
+        # 큐 상태 폴링 타이머
+        self.queue_timer = QTimer(self)
+        self.queue_timer.timeout.connect(self.update_queue_status)
+        self.queue_timer.start(500) # 0.5초마다 갱신
+
+    def update_queue_status(self):
+        # Indexer가 초기화되지 않았거나 큐 매니저가 없으면 패스
+        if hasattr(self.indexer, 'queue_manager'):
+            size = self.indexer.queue_manager.get_queue_size()
+            self.queue_btn.setText(f"대기열: {size}")
+            if size > 0:
+                self.queue_btn.setStyleSheet("color: #FFA500; font-weight: bold; font-size: 12px;") # Orange for active
+            else:
+                self.queue_btn.setStyleSheet("color: #aaaaaa; font-size: 12px;")
+
+    def show_queue_status(self):
+        from ui.queue_dialog import QueueStatusDialog
+        dlg = QueueStatusDialog(self.indexer.queue_manager, self)
+        dlg.exec()
+
+    def set_view_mode(self, mode):
+        self.view_mode = mode
+        self.view_list_btn.setChecked(mode == "list")
+        self.view_icon_btn.setChecked(mode == "icon")
+        self.perform_search() # 현재 검색어로 다시 그리기
+
+    def perform_search(self):
+        query = self.search_input.text()
+        if not query: return
+        
+        mode = self.search_mode.currentText()
+        exts = [e.strip().lower() for e in self.ext_filter.text().split(",") if e.strip()]
+        
+        self.status_label.setText(f"검색 중: {query}...")
+        results = self.indexer.search(query, mode=mode, extensions=exts)
+        
+        # 결과 렌더링
+        # 기존 결과 제거
+        while self.result_layout.count():
+            item = self.result_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        for res in results:
+            path = res['file_path']
+            widget = FileResultWidget(path, view_mode=self.view_mode)
+            widget.clicked.connect(self.on_file_clicked)
+            widget.double_clicked.connect(self.on_file_double_clicked)
+            widget.manage_tags_requested.connect(self.open_file_tag_dialog)
+            self.result_layout.addWidget(widget)
+            
+        self.status_label.setText(f"검색 완료: {len(results)}개의 결과")
+
+    def on_file_clicked(self, path):
+        tags = self.indexer.db.get_tags_for_file(path)
+        self.detail_pane.update_info(path, tags)
+
+    def open_file_tag_dialog(self, path):
+        from ui.tag_dialog import TagSelectionDialog
+        dlg = TagSelectionDialog(self.indexer, path, self)
+        if dlg.exec():
+            # 태그 변경 후 상세 정보 패널 갱신 (현재 선택된 파일이라면)
+            if self.detail_pane.path_label.text() == path:
+                 self.on_file_clicked(path)
+
+    def on_file_double_clicked(self, path):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def check_initial_indexing(self):
+        if not self.indexer.config.get_folders():
+            reply = QMessageBox.question(self, "초기 인덱싱 권장", 
+                                       "다운로드, 문서, 사진 폴더를 인덱싱하시겠습니까?\n내용 검색을 위해 초기 인덱싱이 권장됩니다.",
+                                       QMessageBox.Yes | QMessageBox.No)
+            
+            if reply == QMessageBox.Yes:
+                user_dirs = [
+                    os.path.join(os.path.expanduser("~"), "Downloads"),
+                    os.path.join(os.path.expanduser("~"), "Documents"),
+                    os.path.join(os.path.expanduser("~"), "Pictures")
+                ]
+                valid_dirs = [d for d in user_dirs if os.path.exists(d)]
+                self.start_background_indexing(valid_dirs)
+
+    def select_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "인덱싱할 폴더 선택")
+        if folder:
+            self.start_background_indexing([folder])
+
+    def start_background_indexing(self, folders):
+        if self.worker and self.worker.isRunning():
+            QMessageBox.warning(self, "경고", "이미 인덱싱 작업이 진행 중입니다.")
+            return
+
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+        self.status_label.setText("인덱싱 시작 중...")
+        
+        for f in folders:
+            self.indexer.index_folder(f)
+
+        self.worker = IndexingWorker(self.indexer, folders)
+        self.worker.progress.connect(self.update_progress)
+        self.worker.finished.connect(self.on_indexing_finished)
+        self.worker.start()
+
+    def update_progress(self, current, total, filename):
+        percent = int((current / total) * 100) if total > 0 else 0
+        self.progress_bar.setValue(percent)
+        self.status_label.setText(f"처리 중 ({current}/{total}): {os.path.basename(filename)}")
+
+    def on_indexing_finished(self, total):
+        self.progress_bar.setVisible(False)
+        self.status_label.setText(f"인덱싱 완료: 총 {total}개 파일")
+        QMessageBox.information(self, "완료", f"{total}개의 파일 인덱싱이 완료되었습니다.")
+
+    def _create_menu_bar(self):
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu("파일(&F)")
+        
+        settings_action = QAction("설정(&S)", self)
+        settings_action.triggered.connect(self.show_settings)
+        file_menu.addAction(settings_action)
+        
+        exit_action = QAction("종료(&X)", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+    def show_settings(self):
+        dialog = SettingsDialog(self.indexer, self)
+        dialog.exec()

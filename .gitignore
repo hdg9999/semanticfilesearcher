@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Agent Config
+.agent
+
+# jupyter files
+.ipynb
+
+# DB & config files
+config.json
+*.db
+*.faiss
+*.faiss.meta
