@@ -11,9 +11,9 @@ class LLMAdapter(ABC):
         pass
 
 class OpenAIAdapter(LLMAdapter):
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str = None):
         from openai import OpenAI
-        self.client = OpenAI(api_key=api_key)
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 
     def generate_keywords(self, content_description, existing_tags):
@@ -47,7 +47,11 @@ class OllamaAdapter(LLMAdapter):
     def __init__(self, model: str = "llama3", base_url: str = "http://localhost:11434"):
         import requests
         self.model = model
-        self.base_url = f"{base_url}/api/generate"
+        # base_url이 /api/generate로 끝나지 않으면 추가
+        if not base_url.endswith("/api/generate"):
+             # 마지막 슬래시 제거 후 추가
+            base_url = base_url.rstrip("/") + "/api/generate"
+        self.base_url = base_url
 
     def generate_keywords(self, content_description, existing_tags):
         import requests

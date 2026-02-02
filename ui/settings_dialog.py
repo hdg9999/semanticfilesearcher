@@ -44,6 +44,9 @@ class SettingsDialog(QDialog):
         self.api_key = QLineEdit()
         self.api_key.setEchoMode(QLineEdit.Password)
         
+        self.base_url = QLineEdit()
+        self.base_url.setPlaceholderText("선택 사항 (예: http://localhost:11434)")
+        
         cfg = self.indexer.config.get_llm_config()
         
         layout.addRow("LLM 제공자:", self.llm_provider)
@@ -54,6 +57,9 @@ class SettingsDialog(QDialog):
         
         layout.addRow("API Key:", self.api_key)
         self.api_key.setText(cfg.get("api_key", ""))
+        
+        layout.addRow("Base URL:", self.base_url)
+        self.base_url.setText(cfg.get("base_url", ""))
         
         return widget
 
@@ -169,7 +175,8 @@ class SettingsDialog(QDialog):
         self.indexer.config.set_llm_config(
             self.llm_provider.currentText(),
             self.llm_model.text(),
-            self.api_key.text()
+            self.api_key.text(),
+            base_url=self.base_url.text()
         )
         self.indexer.reload_tagger() # Reload tagger with new config
         super().accept()

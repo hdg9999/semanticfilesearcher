@@ -48,10 +48,11 @@ class ConfigManager:
     def get_llm_config(self):
         return self.config.get("llm", {})
 
-    def set_llm_config(self, provider, model, api_key):
+    def set_llm_config(self, provider, model, api_key, base_url=""):
         self.config["llm"] = {
             "provider": provider,
             "model": model,
-            "api_key": api_key
+            "api_key": api_key,
+            "base_url": base_url
         }
         self.save()

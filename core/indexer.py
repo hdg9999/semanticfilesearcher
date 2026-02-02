@@ -46,15 +46,19 @@ class SemanticIndexer:
         provider = cfg.get("provider", "Ollama")
         model = cfg.get("model", "llama3")
         api_key = cfg.get("api_key", "")
+        base_url = cfg.get("base_url", "") # base_url 로드
         
         if provider == "OpenAI":
-            adapter = OpenAIAdapter(api_key=api_key, model=model)
+            adapter = OpenAIAdapter(api_key=api_key, model=model, base_url=base_url if base_url else None)
         elif provider == "Gemini":
             adapter = GeminiAdapter(api_key=api_key, model=model)
         elif provider == "HuggingFace":
             adapter = HuggingFaceAdapter(model_path=model)
         else: # Ollama default
-            adapter = OllamaAdapter(model=model)
+            if base_url:
+                adapter = OllamaAdapter(model=model, base_url=base_url)
+            else:
+                adapter = OllamaAdapter(model=model)
             
         self.tagger = AutoTagger(adapter=adapter)
         print(f"Tagger initialized with provider: {provider}, model: {model}")

@@ -23,9 +23,15 @@ class FileResultWidget(QFrame):
         layout = QHBoxLayout(self) if self.view_mode == "list" else QVBoxLayout(self)
         layout.setContentsMargins(10, 5, 10, 5)
         
-        # 파일 아이콘 (여기서는 단순 폴더 아이콘으로 대체, 실제로는 시스템 아이콘 추출 권장)
-        self.icon_label = QLabel("📄")
-        self.icon_label.setStyleSheet("font-size: 24px;")
+        # 파일 아이콘 (시스템 아이콘 사용)
+        from PySide6.QtWidgets import QFileIconProvider
+        from PySide6.QtCore import QFileInfo
+        
+        provider = QFileIconProvider()
+        icon = provider.icon(QFileInfo(self.file_path))
+        
+        self.icon_label = QLabel()
+        self.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
         layout.addWidget(self.icon_label, alignment=Qt.AlignCenter)
         
         # 정보 영역
