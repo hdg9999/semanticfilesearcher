@@ -6,7 +6,7 @@ from datetime import datetime
 class DetailPane(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedWidth(250)
+        self.setMinimumWidth(180)
         self.setObjectName("detailPane")
         self.setStyleSheet("#detailPane { border-left: 1px solid #333333; background-color: #1e1e1e; }")
         
@@ -48,9 +48,14 @@ class DetailPane(QFrame):
         vbox.addWidget(val_lbl)
         return container
 
-    def update_info(self, file_path, tags=None):
+    def update_info(self, file_path, tags=None, icon=None):
         self.name_label.setText(os.path.basename(file_path))
         self.path_label.setText(file_path)
+        
+        if icon:
+            self.icon_label.setPixmap(icon.scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            self.icon_label.setText("📄") # Fallback text icon
         
         mtime = os.path.getmtime(file_path)
         dt = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")

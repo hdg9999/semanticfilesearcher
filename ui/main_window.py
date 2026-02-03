@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QListWidget, QLabel, 
                              QFileDialog, QListWidgetItem, QMessageBox, QProgressBar,
-                             QComboBox, QScrollArea, QFrame)
+                             QComboBox, QScrollArea, QFrame, QSplitter)
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer
 from PySide6.QtGui import QFont, QAction, QDesktopServices, QIcon, QPixmap
 from ui.workers import IndexingWorker
@@ -20,6 +20,7 @@ class MainWindow(QMainWindow):
         
         self.worker = None
         self.view_mode = "list"
+        self.selected_item = None # Currently selected FileResultWidget
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -97,14 +98,25 @@ class MainWindow(QMainWindow):
         self.view_list_btn.clicked.connect(lambda: self.set_view_mode("list"))
         self.view_icon_btn.clicked.connect(lambda: self.set_view_mode("icon"))
         
+        
+        # Detail Pane Toggle Button
+        self.toggle_detail_btn = QPushButton()
+        self.toggle_detail_btn.setIcon(QIcon("ui/resources/icons/sidebar_toggle_white.svg"))
+        self.toggle_detail_btn.setCheckable(True)
+        self.toggle_detail_btn.setChecked(True)
+        self.toggle_detail_btn.clicked.connect(self.toggle_detail_pane)
+        self.toggle_detail_btn.setFixedSize(32, 32)
+        self.toggle_detail_btn.setToolTip("상세 패널 토글")
+        
         control_layout.addWidget(self.view_list_btn)
         control_layout.addWidget(self.view_icon_btn)
+        control_layout.addWidget(self.toggle_detail_btn) # Add toggle button
         control_layout.addStretch()
         
         main_layout.addWidget(control_container)
 
-        # 중간 영역 (결과 리스트 + 상세 정보 패널)
-        content_area = QHBoxLayout()
+        # 중간 영역 (Splitter 사용)
+        self.content_splitter = QSplitter(Qt.Horizontal)
         
         # 결과 리스트 (Scroll Area 사용)
         self.scroll_area = QScrollArea()
@@ -116,13 +128,21 @@ class MainWindow(QMainWindow):
         self.result_layout.setAlignment(Qt.AlignTop)
         self.scroll_area.setWidget(self.result_container)
         
-        content_area.addWidget(self.scroll_area, stretch=1)
+        self.content_splitter.addWidget(self.scroll_area)
         
         # 상세 정보 패널
         self.detail_pane = DetailPane()
-        content_area.addWidget(self.detail_pane)
+        self.content_splitter.addWidget(self.detail_pane)
         
-        main_layout.addLayout(content_area)
+        # 초기 비율 설정 (9:1)
+        self.content_splitter.setStretchFactor(0, 9)
+        # 초기 비율 설정 (9:1)
+        self.content_splitter.setStretchFactor(0, 9)
+        self.content_splitter.setStretchFactor(1, 1)
+        self.content_splitter.setSizes([900, 300]) # Explicitly set initial sizes
+        
+        main_layout.addWidget(self.content_splitter, 1) # Add stretch factor to expand
+
 
         # 하단 상태 바
         status_container = QWidget()
@@ -208,10 +228,26 @@ class MainWindow(QMainWindow):
             self.result_layout.addWidget(widget)
             
         self.status_label.setText(f"검색 완료: {len(results)}개의 결과")
+        self.selected_item = None # Reset selection on new search
+
+    def toggle_detail_pane(self, checked):
+        self.detail_pane.setVisible(checked)
 
     def on_file_clicked(self, path):
-        tags = self.indexer.db.get_tags_for_file(path)
-        self.detail_pane.update_info(path, tags)
+        # Handle visual selection
+        sender = self.sender()
+        if isinstance(sender, FileResultWidget):
+             if self.selected_item:
+                 self.selected_item.set_selected(False)
+             
+             self.selected_item = sender
+             self.selected_item.set_selected(True)
+
+             # Update Detail Pane
+             tags = self.indexer.db.get_tags_for_file(path)
+             # Get icon from the widget
+             icon = sender.icon_label.pixmap() if hasattr(sender, 'icon_label') and hasattr(sender.icon_label, 'pixmap') else None
+             self.detail_pane.update_info(path, tags, icon)
 
     def open_file_tag_dialog(self, path):
         from ui.tag_dialog import TagSelectionDialog

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QListWidget, QListWidgetItem, 
-                               QLabel, QPushButton, QHBoxLayout, QFrame, QWidget)
-from PySide6.QtCore import QTimer, Qt
+                               QLabel, QPushButton, QHBoxLayout, QFrame, QWidget, QSizeGrip)
+from PySide6.QtCore import QTimer, Qt, QPoint
 from ui.components.spinner import LoadingSpinner
 import time
 
@@ -13,6 +13,9 @@ class QueueStatusDialog(QDialog):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.setStyleSheet("border: 1px solid #444444; background-color: #2b2b2b;")
         
+        # Window Dragging State
+        self.old_pos = None
+        
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         
@@ -22,7 +25,7 @@ class QueueStatusDialog(QDialog):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 5, 10, 5)
         
-        title = QLabel("Indexing Queue")
+        title = QLabel("대기열") # En: Indexing Queue
         title.setStyleSheet("font-weight: bold; border: none;")
         header_layout.addWidget(title)
         
@@ -31,7 +34,7 @@ class QueueStatusDialog(QDialog):
         close_btn_header = QPushButton("X")
         close_btn_header.setFixedSize(24, 24)
         close_btn_header.setStyleSheet("""
-            QPushButton { background-color: transparent; border: none; font-weight: bold; color: #aaaaaa; }
+            QPushButton { background-color: transparent; border: none; font-weight: bold; color: white; }
             QPushButton:hover { color: white; background-color: #c42b1c; }
         """)
         close_btn_header.clicked.connect(self.close)
@@ -48,7 +51,7 @@ class QueueStatusDialog(QDialog):
         current_layout = QHBoxLayout()
         self.spinner = LoadingSpinner(self)
         self.spinner.setVisible(False)
-        self.current_label = QLabel("Idle")
+        self.current_label = QLabel("현재 작업 없음") # En: Idle
         self.current_label.setStyleSheet("font-weight: bold; color: #4CAF50;")
         
         current_layout.addWidget(self.spinner)
@@ -63,22 +66,27 @@ class QueueStatusDialog(QDialog):
         line.setFrameShadow(QFrame.Sunken)
         content_layout.addWidget(line)
         
-        self.status_label = QLabel("Loading...")
+        self.status_label = QLabel("로딩 중...")
         content_layout.addWidget(self.status_label)
         
         self.list_widget = QListWidget()
         content_layout.addWidget(self.list_widget)
         
         btn_layout = QHBoxLayout()
-        self.refresh_btn = QPushButton("Refresh")
+        self.refresh_btn = QPushButton("새로고침") # En: Refresh
         self.refresh_btn.clicked.connect(self.refresh_list)
         
-        self.close_btn = QPushButton("Close")
+        self.close_btn = QPushButton("닫기") # En: Close
         self.close_btn.clicked.connect(self.close)
         
         btn_layout.addStretch()
         btn_layout.addWidget(self.refresh_btn)
         btn_layout.addWidget(self.close_btn)
+        
+        # Resizing Grip
+        self.size_grip = QSizeGrip(self)
+        btn_layout.addWidget(self.size_grip, 0, Qt.AlignBottom | Qt.AlignRight)
+        
         content_layout.addLayout(btn_layout)
         
         layout.addWidget(content_widget)
@@ -94,14 +102,14 @@ class QueueStatusDialog(QDialog):
         current_task = self.queue_manager.get_current_task()
         if current_task:
             self.spinner.setVisible(True)
-            self.current_label.setText(f"Processing: {current_task.path}")
+            self.current_label.setText(f"처리 중: {current_task.path}") # En: Processing: ...
         else:
             self.spinner.setVisible(False)
-            self.current_label.setText("Idle")
+            self.current_label.setText("현재 작업 없음") # En: Idle
 
         # 2. Update Pending List
         items = self.queue_manager.get_pending_items()
-        self.status_label.setText(f"Pending Tasks: {len(items)}")
+        self.status_label.setText(f"대기 중인 작업: {len(items)}") # En: Pending Tasks: ...
         
         self.list_widget.clear()
         # Sort by priority (Delete first) then timestamp
@@ -116,3 +124,17 @@ class QueueStatusDialog(QDialog):
             if item.status == "deleted":
                 list_item.setForeground(Qt.red)
             self.list_widget.addItem(list_item)
+            
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.old_pos = event.globalPosition().toPoint()
+
+    def mouseMoveEvent(self, event):
+        if self.old_pos:
+            delta = QPoint(event.globalPosition().toPoint() - self.old_pos)
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.old_pos = event.globalPosition().toPoint()
+            
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.old_pos = None

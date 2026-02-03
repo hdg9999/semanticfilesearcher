@@ -76,21 +76,25 @@ class FileResultWidget(QFrame):
         self.actions_widget.setVisible(False)
         layout.addWidget(self.actions_widget, alignment=Qt.AlignCenter)
 
+    def set_selected(self, selected):
+        if selected:
+            self.setStyleSheet("#fileResult { background-color: #37373d; border-radius: 4px; }")
+            self.actions_widget.setVisible(True)
+        else:
+            self.setStyleSheet("#fileResult { background-color: transparent; }")
+            self.actions_widget.setVisible(False)
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.clicked.emit(self.file_path)
+            # Selection logic will be handled by MainWindow
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.double_clicked.emit(self.file_path)
 
-    def enterEvent(self, event):
-        self.actions_widget.setVisible(True)
-        self.setStyleSheet("#fileResult { background-color: #37373d; border-radius: 4px; }")
-
-    def leaveEvent(self, event):
-        self.actions_widget.setVisible(False)
-        self.setStyleSheet("#fileResult { background-color: transparent; }")
+    def contextMenuEvent(self, event):
+        self.show_context_menu()
 
     def open_folder(self):
         folder = os.path.dirname(self.file_path)
@@ -103,9 +107,13 @@ class FileResultWidget(QFrame):
         tag_act.triggered.connect(lambda: self.manage_tags_requested.emit(self.file_path))
         del_act = QAction("파일 삭제", self)
         
-        menu.addAction(info_act)
+        menu.addAction(info_act) 
         menu.addAction(tag_act)
         menu.addSeparator()
-        menu.addAction(del_act)
+        menu.addAction(del_act) 
         
-        menu.exec(self.more_btn.mapToGlobal(self.more_btn.rect().bottomLeft()))
+        # Show menu at cursor position if triggered by context menu event, or below button
+        if self.sender() == self.more_btn:
+            menu.exec(self.more_btn.mapToGlobal(self.more_btn.rect().bottomLeft()))
+        else:
+            menu.exec(self.cursor().pos())
