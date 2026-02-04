@@ -92,14 +92,23 @@ class SemanticIndexer:
         self.config.remove_folder(folder_path)
         self.monitor.remove_path(folder_path)
 
-    def search(self, query, mode="통합 검색", extensions=None):
+    def search(self, query, mode="통합 검색", extensions=None, tags=None, tag_logic="AND"):
         # 1. 확장자 필터링 (SQLite에서 미리 처리하거나 후처리 가능)
         # 여기서는 우선 벡터 검색 후 후처리를 수행하거나 상위 레벨에서 필터링합니다.
         
         # 2. 검색 모드에 따른 처리
-        if mode == "태그 검색":
-            results = self.db.search_by_tag(query)
+        # 태그가 제공되면 태그 검색 로직 수행 (검색어 없음)
+        if tags and not query:
+            results = self.db.search_by_tags(tags, condition=tag_logic)
             return [{"file_path": path, "distance": 0.0} for path in results]
+
+        # 태그와 검색어가 둘 다 있는 경우 (1-3 요구사항: 검색어 + 태그 필터링)
+        # 우선 벡터 검색 후 태그로 필터링 (또는 반대) - 우선 벡터 검색 결과를 가져옴
+        if mode == "태그 검색":
+             # Legacy mode support if any
+             if query:
+                results = self.db.search_by_tag(query)
+                return [{"file_path": path, "distance": 0.0} for path in results]
             
         # 3. 벡터 검색
         query_vec = self.embedding.encode_text(query)
@@ -107,11 +116,22 @@ class SemanticIndexer:
         
         # 4. 후속 필터링 (확장자 등)
         filtered_results = []
+        
+        # 태그 필터링을 위한 허용 파일 목록 미리 조회 (Query + Tags 경우)
+        allowed_files_by_tags = None
+        if tags and query:
+             allowed_files_by_tags = set(self.db.search_by_tags(tags, condition=tag_logic))
+
         for res in vector_results:
             path = res['file_path']
             # 파일 존재 여부 확인 (삭제된 파일이 벡터DB에 남아있을 수 있음)
             if not os.path.exists(path):
                 continue
+
+            # 태그 필터 적용
+            if allowed_files_by_tags is not None:
+                if path not in allowed_files_by_tags:
+                    continue
 
             ext = os.path.splitext(path)[1].lower().replace(".", "")
             

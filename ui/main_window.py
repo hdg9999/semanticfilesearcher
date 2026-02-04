@@ -9,6 +9,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.components.result_item import FileResultWidget
 from ui.components.detail_pane import DetailPane
 from ui.components.badged_button import BadgedButton
+from ui.components.tag_input import TagInputWidget
 import os
 
 class MainWindow(QMainWindow):
@@ -18,6 +19,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Semantic File Searcher")
         self.resize(1200, 850)
         
+        self.completer = None
+        self.tag_colors = {} # Initialize tag_colors dictionary
         self.worker = None
         self.view_mode = "list"
         self.selected_item = None # Currently selected FileResultWidget
@@ -54,7 +57,7 @@ class MainWindow(QMainWindow):
         search_layout = QHBoxLayout()
         
         self.search_mode = QComboBox()
-        self.search_mode.addItems(["통합 검색", "텍스트 검색", "이미지 검색", "태그 검색"])
+        self.search_mode.addItems(["통합 검색", "텍스트 검색", "이미지 검색"])
         self.search_mode.setFixedWidth(120)
         
         self.search_input = QLineEdit()
@@ -76,6 +79,31 @@ class MainWindow(QMainWindow):
         top_layout.addLayout(search_layout)
         
         main_layout.addWidget(top_container)
+
+        # 2.5행: 태그 검색 바 (새로 추가)
+        tag_container = QWidget()
+        tag_container.setStyleSheet("background-color: #1e1e1e; border-bottom: 1px solid #333333;")
+        tag_layout = QHBoxLayout(tag_container)
+        tag_layout.setContentsMargins(20, 5, 20, 10)
+        
+        self.tag_logic = QComboBox()
+        self.tag_logic.addItems(["AND", "OR"])
+        self.tag_logic.setFixedWidth(80)
+        self.tag_logic.setToolTip("태그 검색 조건 (AND: 모두 포함, OR: 하나라도 포함)")
+        
+        self.tag_input = TagInputWidget()
+        self.tag_input.return_pressed.connect(self.perform_search)
+        
+        tag_layout.addWidget(self.tag_logic)
+        tag_layout.addWidget(self.tag_input, 1) # Add stretch factor 1
+        
+        # Insert tag container into main layout (using insertWidget or just add since top_container is added)
+        # But main_layout is vertical. So add it after top_container.
+        # But top_container was already added. I can't easily insert into main_layout in the middle of this function if I just append.
+        # Wait, I am editing __init__. 'main_layout.addWidget(top_container)' was at line 78.
+        # So I will just replace the block including 78.
+        
+        main_layout.addWidget(tag_container)
 
         # 3행: 뷰 모드 컨트롤 바 (검색 모드 아래, 결과창 위)
         control_container = QWidget()
@@ -170,6 +198,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(status_container)
 
         self._create_menu_bar()
+        self.refresh_tag_completer() # Initialize completer
         self.check_initial_indexing()
         
         # 큐 상태 폴링 타이머
@@ -202,7 +231,11 @@ class MainWindow(QMainWindow):
         exts = [e.strip().lower() for e in self.ext_filter.text().split(",") if e.strip()]
         
         self.status_label.setText(f"검색 중: {query}...")
-        results = self.indexer.search(query, mode=mode, extensions=exts)
+        
+        tags = self.tag_input.get_tags()
+        tag_logic = self.tag_logic.currentText()
+        
+        results = self.indexer.search(query, mode=mode, extensions=exts, tags=tags, tag_logic=tag_logic)
         
         # 결과 렌더링
         # 뷰 모드에 따라 컨테이너 및 레이아웃 설정
@@ -256,6 +289,16 @@ class MainWindow(QMainWindow):
             # 태그 변경 후 상세 정보 패널 갱신 (현재 선택된 파일이라면)
             if self.detail_pane.path_label.text() == path:
                  self.on_file_clicked(path)
+            # Update tag completer if new tags were added
+            self.refresh_tag_completer()
+
+    def refresh_tag_completer(self):
+        tags = self.indexer.db.get_all_tags()
+        # tags is list of (name, color)
+        tag_names = [t[0] for t in tags]
+        self.tag_input.set_completer_items(tag_names)
+        self.tag_colors = {t[0]: t[1] for t in tags} # Update instance variable
+        self.tag_input.set_tag_colors(self.tag_colors) # Pass to TagInputWidget
 
     def on_file_double_clicked(self, path):
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
@@ -322,3 +365,5 @@ class MainWindow(QMainWindow):
     def show_settings(self):
         dialog = SettingsDialog(self.indexer, self)
         dialog.exec()
+        # 설정 창이 닫힌 후 태그 정보(색상 등)가 변경되었을 수 있으므로 갱신
+        self.refresh_tag_completer()

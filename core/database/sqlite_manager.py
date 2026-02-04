@@ -37,9 +37,16 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS tags (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE NOT NULL,
+                    color TEXT DEFAULT '#007acc',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Migration: Add color column if not exists
+            cursor.execute("PRAGMA table_info(tags)")
+            columns = [info[1] for info in cursor.fetchall()]
+            if 'color' not in columns:
+                cursor.execute("ALTER TABLE tags ADD COLUMN color TEXT DEFAULT '#007acc'")
             # FileTags relationship table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS file_tags (
@@ -67,13 +74,20 @@ class DatabaseManager:
             conn.commit()
             return cursor.lastrowid
 
-    def add_tag(self, tag_name):
+    def add_tag(self, tag_name, color="#007acc"):
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name,))
+            cursor.execute("INSERT OR IGNORE INTO tags (name, color) VALUES (?, ?)", (tag_name, color))
             conn.commit()
             cursor.execute("SELECT id FROM tags WHERE name = ?", (tag_name,))
             return cursor.fetchone()[0]
+
+    def update_tag_color(self, tag_name, color):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE tags SET color = ? WHERE name = ?", (color, tag_name))
+            conn.commit()
+            return cursor.rowcount > 0
 
     def link_file_tag(self, file_path, tag_name):
         with self._get_connection() as conn:
@@ -90,8 +104,8 @@ class DatabaseManager:
     def get_all_tags(self):
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT name FROM tags")
-            return [row[0] for row in cursor.fetchall()]
+            cursor.execute("SELECT name, color FROM tags")
+            return cursor.fetchall() # Returns list of (name, color) tuples
 
     def search_by_tag(self, tag_name):
         with self._get_connection() as conn:
@@ -102,6 +116,38 @@ class DatabaseManager:
                 JOIN tags t ON ft.tag_id = t.id
                 WHERE t.name = ?
             """, (tag_name,))
+            return [row[0] for row in cursor.fetchall()]
+
+    def search_by_tags(self, tags, condition="AND"):
+        if not tags: return []
+        
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            if condition == "OR":
+                placeholders = ",".join(["?"] * len(tags))
+                query = f"""
+                    SELECT DISTINCT f.file_path FROM files f
+                    JOIN file_tags ft ON f.id = ft.file_id
+                    JOIN tags t ON ft.tag_id = t.id
+                    WHERE t.name IN ({placeholders})
+                """
+                cursor.execute(query, tags)
+                
+            else: # AND
+                # Find files that have ALL tags
+                # Use intersection or count grouping
+                placeholders = ",".join(["?"] * len(tags))
+                query = f"""
+                    SELECT f.file_path FROM files f
+                    JOIN file_tags ft ON f.id = ft.file_id
+                    JOIN tags t ON ft.tag_id = t.id
+                    WHERE t.name IN ({placeholders})
+                    GROUP BY f.id
+                    HAVING COUNT(DISTINCT t.id) = ?
+                """
+                cursor.execute(query, tags + [len(tags)])
+                
             return [row[0] for row in cursor.fetchall()]
 
     def get_tags_for_file(self, file_path):

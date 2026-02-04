@@ -1,0 +1,198 @@
+from PySide6.QtWidgets import (QWidget, QLineEdit, QLabel, QHBoxLayout, 
+                             QPushButton, QFrame, QCompleter, QApplication, QSizePolicy)
+from PySide6.QtCore import Qt, Signal, QSize, QStringListModel
+from PySide6.QtGui import QIcon, QPainter, QColor, QBrush, QPen
+from ui.components.flow_layout import FlowLayout
+
+class TagLabel(QFrame):
+    removed = Signal(str)
+
+    def __init__(self, text, color="#007acc", parent=None):
+        super().__init__(parent)
+        self.text = text
+        self.color = color
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 2, 4, 2)
+        layout.setSpacing(4)
+        
+        self.label = QLabel(text)
+        self.label.setStyleSheet("color: white; font-weight: bold;")
+        
+        self.close_btn = QPushButton("×")
+        self.close_btn.setFixedSize(16, 16)
+        self.close_btn.setFlat(True)
+        self.close_btn.setCursor(Qt.PointingHandCursor)
+        self.close_btn.setStyleSheet("""
+            QPushButton { color: white; border: none; font-weight: bold; margin-top: -2px; }
+            QPushButton:hover { color: #ffcccc; }
+        """)
+        self.close_btn.clicked.connect(lambda: self.removed.emit(self.text))
+        
+        layout.addWidget(self.label)
+        layout.addWidget(self.close_btn)
+        
+        self.setStyleSheet(f"""
+            TagLabel {{
+                background-color: {color};
+                border-radius: 10px;
+            }}
+        """)
+        self.setFixedHeight(24)
+
+    def update_color(self, color):
+        self.color = color
+        bg_color = QColor(color)
+        luminance = (0.299 * bg_color.red() + 0.587 * bg_color.green() + 0.114 * bg_color.blue())
+        text_color = "black" if luminance > 128 else "white"
+        
+        # Update close button color for visibility
+        close_color = "black" if luminance > 128 else "white"
+        hover_color = "#333333" if luminance > 128 else "#ffcccc"
+
+        self.label.setStyleSheet(f"color: {text_color}; font-weight: bold;")
+        self.close_btn.setStyleSheet(f"""
+            QPushButton {{ color: {close_color}; border: none; font-weight: bold; margin-top: -2px; }}
+            QPushButton:hover {{ color: {hover_color}; }}
+        """)
+
+        self.setStyleSheet(f"""
+            TagLabel {{
+                background-color: {color};
+                border-radius: 10px;
+            }}
+        """)
+
+class TagInputWidget(QFrame):
+    tags_changed = Signal(list)
+    return_pressed = Signal() # Enter key pressed in input
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.tags = []
+        
+        # Style
+        self.setStyleSheet("""
+            TagInputWidget {
+                background-color: #252526;
+                border: 1px solid #3e3e42;
+                border-radius: 4px;
+            }
+        """)
+        
+        self.flow_layout = FlowLayout(self, margin=4, spacing=4)
+        
+        self.input_edit = QLineEdit(self)
+        self.input_edit.setPlaceholderText("태그 입력...")
+        self.input_edit.setMinimumWidth(100) # Ensure it has some width
+        self.input_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.input_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: transparent;
+                border: none;
+                color: #cccccc;
+                selection-background-color: #007acc;
+            }
+        """)
+        self.input_edit.returnPressed.connect(self.handle_return)
+        self.input_edit.textChanged.connect(self.handle_text_changed)
+        # Install event filter to capture backspace
+        self.input_edit.installEventFilter(self)
+        
+        from PySide6.QtWidgets import QWidgetItem
+        self.flow_layout.addItem(QWidgetItem(self.input_edit))
+        
+        self.completer = None
+        self.tag_colors = {}
+
+    def set_tag_colors(self, colors):
+        self.tag_colors = colors
+        # Update existing tags
+        for i in range(self.flow_layout.count()):
+            item = self.flow_layout.itemAt(i)
+            widget = item.widget()
+            if isinstance(widget, TagLabel):
+                if widget.text in colors:
+                    widget.update_color(colors[widget.text])
+
+    def set_completer_items(self, items):
+        self.completer = QCompleter(items)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchContains)
+        self.input_edit.setCompleter(self.completer)
+        # Handle selection from completer
+        self.completer.activated.connect(self.add_tag)
+
+    def eventFilter(self, obj, event):
+        from PySide6.QtCore import QEvent
+        if obj == self.input_edit and event.type() == QEvent.KeyPress:
+            key = event.key()
+            if key == Qt.Key_Backspace and not self.input_edit.text():
+                if self.tags:
+                    self.remove_tag(self.tags[-1])
+                    return True
+        return super().eventFilter(obj, event)
+
+    def handle_return(self):
+        text = self.input_edit.text().strip()
+        if text:
+            self.add_tag(text)
+        else:
+            self.return_pressed.emit()
+
+    def handle_text_changed(self, text):
+        pass
+
+    def add_tag(self, text):
+        text = text.strip()
+        if not text: return
+        if text in self.tags: 
+            self.input_edit.clear()
+            return
+            
+        self.tags.append(text)
+        
+        # Determine color
+        color = self.tag_colors.get(text, "#007acc")
+        
+        tag_widget = TagLabel(text, color=color, parent=self)
+        # Ensure text color is correct based on background
+        tag_widget.update_color(color) 
+        
+        tag_widget.removed.connect(self.remove_tag)
+        tag_widget.show()
+        
+        from PySide6.QtWidgets import QWidgetItem
+        # Remove input from layout, add tag, add input back
+        self.flow_layout.removeWidget(self.input_edit)
+        self.flow_layout.addItem(QWidgetItem(tag_widget))
+        self.flow_layout.addItem(QWidgetItem(self.input_edit))
+        
+        self.input_edit.setFocus()
+        self.input_edit.clear()
+        
+        self.tags_changed.emit(self.tags)
+
+    def remove_tag(self, text):
+        if text in self.tags:
+            self.tags.remove(text)
+            
+            # Find and remove widget
+            for i in range(self.flow_layout.count()):
+                item = self.flow_layout.itemAt(i)
+                widget = item.widget()
+                if isinstance(widget, TagLabel) and widget.text == text:
+                    widget.hide()
+                    self.flow_layout.takeAt(i) 
+                    widget.deleteLater()
+                    break
+            
+            self.tags_changed.emit(self.tags)
+
+    def get_tags(self):
+        return self.tags
+
+    def clear(self):
+        # Remove all tags
+        for t in list(self.tags):
+            self.remove_tag(t)
