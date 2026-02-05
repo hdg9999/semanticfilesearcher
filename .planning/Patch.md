@@ -138,6 +138,11 @@
 - `ui/main_window.py`: 결과 컨테이너 위젯(`result_container`)에 `setObjectName("resultContainer")` 추가
 - `ui/resources/styles/components/main_window.qss`: `QWidget#resultContainer` 스타일 추가 (`background-color: #252526`)
 
+## [2026-02-05] QueueStatusDialog 스타일 리팩토링
+- `ui/queue_dialog.py`의 인라인 스타일을 `ui/resources/styles/components/queue_dialog.qss`로 이동
+- 커스텀 헤더 및 스피너 스타일은 유지하되 QSS로 이관
+- 다이얼로그 본문에 글로벌 스타일 적용 (`StyleManager` 연동)
+
 ## [2026-02-05] 테마 선택 기능 추가 (Theme Selection Feature)
 - **라이트 모드(Light Mode) 지원**
     - `ui/resources/styles/themes/light.qss`: 라이트 테마 스타일시트 신규 생성 (기존 다크 테마 색상 반전).

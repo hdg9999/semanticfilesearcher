@@ -1,0 +1,36 @@
+/* Queue Status Dialog (Frameless) */
+#queueDialog {
+    border: 1px solid #444444;
+    /* Background handled by global QDialog style */
+}
+
+/* Custom Header */
+QWidget#dialogHeader {
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #333333;
+}
+
+QLabel#dialogTitle {
+    font-weight: bold;
+    border: none;
+    color: #ffffff; /* Ensure title is white in header */
+}
+
+/* Header Close Button */
+QPushButton#headerCloseBtn {
+    background-color: transparent;
+    border: none;
+    font-weight: bold;
+    color: white;
+}
+
+QPushButton#headerCloseBtn:hover {
+    color: white;
+    background-color: #c42b1c;
+}
+
+/* Current Task Label */
+QLabel#currentTaskLabel {
+    font-weight: bold;
+    color: #4CAF50;
+}

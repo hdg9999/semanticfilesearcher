@@ -11,8 +11,14 @@ class QueueStatusDialog(QDialog):
         self.setWindowTitle("Indexing Queue Status")
         self.resize(500, 450)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
-        self.setStyleSheet("border: 1px solid #444444; background-color: #2b2b2b;")
         
+        # Object Name & Style
+        self.setObjectName("queueDialog")
+        from ui.style_manager import StyleManager
+        style = StyleManager().get_component_style("queue_dialog")
+        if style:
+            self.setStyleSheet(style)
+            
         # Window Dragging State
         self.old_pos = None
         
@@ -21,22 +27,19 @@ class QueueStatusDialog(QDialog):
         
         # Custom Header
         header = QWidget()
-        header.setStyleSheet("background-color: #1e1e1e; border-bottom: 1px solid #333333;")
+        header.setObjectName("dialogHeader")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 5, 10, 5)
         
         title = QLabel("대기열") # En: Indexing Queue
-        title.setStyleSheet("font-weight: bold; border: none;")
+        title.setObjectName("dialogTitle")
         header_layout.addWidget(title)
         
         header_layout.addStretch()
         
         close_btn_header = QPushButton("X")
+        close_btn_header.setObjectName("headerCloseBtn")
         close_btn_header.setFixedSize(24, 24)
-        close_btn_header.setStyleSheet("""
-            QPushButton { background-color: transparent; border: none; font-weight: bold; color: white; }
-            QPushButton:hover { color: white; background-color: #c42b1c; }
-        """)
         close_btn_header.clicked.connect(self.close)
         header_layout.addWidget(close_btn_header)
         
@@ -44,7 +47,7 @@ class QueueStatusDialog(QDialog):
         
         # Content Container (to add margins for the rest)
         content_widget = QWidget()
-        content_widget.setStyleSheet("border: none;")
+        # content_widget.setStyleSheet("border: none;") # Removed inline style
         content_layout = QVBoxLayout(content_widget)
         
         # Current Processing Section
@@ -52,17 +55,15 @@ class QueueStatusDialog(QDialog):
         self.spinner = LoadingSpinner(self)
         self.spinner.setVisible(False)
         self.current_label = QLabel("현재 작업 없음") # En: Idle
-        self.current_label.setStyleSheet("font-weight: bold; color: #4CAF50;")
+        self.current_label.setObjectName("currentTaskLabel")
         
         current_layout.addWidget(self.spinner)
-        current_layout.addWidget(self.current_label)
         current_layout.addWidget(self.current_label)
         current_layout.addStretch()
         content_layout.addLayout(current_layout)
         
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
         line.setFrameShadow(QFrame.Sunken)
         content_layout.addWidget(line)
         
