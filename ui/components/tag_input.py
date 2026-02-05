@@ -17,15 +17,23 @@ class TagLabel(QFrame):
         layout.setSpacing(4)
         
         self.label = QLabel(text)
-        self.label.setStyleSheet("color: white; font-weight: bold;")
+        self.label.setStyleSheet("color: white; font-weight: bold; background-color: transparent; border: none; text-decoration: none;")
         
         self.close_btn = QPushButton("×")
         self.close_btn.setFixedSize(16, 16)
         self.close_btn.setFlat(True)
         self.close_btn.setCursor(Qt.PointingHandCursor)
         self.close_btn.setStyleSheet("""
-            QPushButton { color: white; border: none; font-weight: bold; margin-top: -2px; }
-            QPushButton:hover { color: #ffcccc; }
+            QPushButton { 
+                color: white; 
+                border: none; 
+                font-weight: bold; 
+                margin-top: -2px; 
+                background-color: transparent; 
+                padding: 0px; /* Reset padding to prevent clipping */
+                font-size: 14px; /* Ensure visible size */
+            }
+            QPushButton:hover { color: #ffcccc; background-color: transparent; }
         """)
         self.close_btn.clicked.connect(lambda: self.removed.emit(self.text))
         
@@ -35,10 +43,11 @@ class TagLabel(QFrame):
         self.setStyleSheet(f"""
             TagLabel {{
                 background-color: {color};
-                border-radius: 10px;
+                border-radius: 14px; /* Increased radius */
+                border: none; /* Ensure no border from QFrame */
             }}
         """)
-        self.setFixedHeight(24)
+        self.setFixedHeight(28)
 
     def update_color(self, color):
         self.color = color
@@ -50,16 +59,25 @@ class TagLabel(QFrame):
         close_color = "black" if luminance > 128 else "white"
         hover_color = "#333333" if luminance > 128 else "#ffcccc"
 
-        self.label.setStyleSheet(f"color: {text_color}; font-weight: bold;")
+        self.label.setStyleSheet(f"color: {text_color}; font-weight: bold; background-color: transparent; border: none; text-decoration: none;")
         self.close_btn.setStyleSheet(f"""
-            QPushButton {{ color: {close_color}; border: none; font-weight: bold; margin-top: -2px; }}
-            QPushButton:hover {{ color: {hover_color}; }}
+            QPushButton {{ 
+                color: {close_color}; 
+                border: none; 
+                font-weight: bold; 
+                margin-top: -2px; 
+                background-color: transparent;
+                padding: 0px;
+                font-size: 14px;
+            }}
+            QPushButton:hover {{ color: {hover_color}; background-color: transparent; }}
         """)
 
         self.setStyleSheet(f"""
             TagLabel {{
                 background-color: {color};
-                border-radius: 10px;
+                border-radius: 14px;
+                border: none; /* Ensure no border from QFrame */
             }}
         """)
 
@@ -119,6 +137,25 @@ class TagInputWidget(QFrame):
         self.completer = QCompleter(items)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.completer.setFilterMode(Qt.MatchContains)
+        
+        # Style the popup
+        popup = self.completer.popup()
+        popup.setStyleSheet("""
+            QListView {
+                background-color: #252526;
+                color: #cccccc;
+                border: 1px solid #3e3e42;
+                outline: none;
+            }
+            QListView::item {
+                padding: 4px;
+            }
+            QListView::item:selected {
+                background-color: #007acc;
+                color: #ffffff;
+            }
+        """)
+        
         self.input_edit.setCompleter(self.completer)
         # Handle selection from completer
         self.completer.activated.connect(self.add_tag)

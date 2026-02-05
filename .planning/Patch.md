@@ -116,3 +116,18 @@
 - **데이터 동기화(Synchronization) 및 지속성(Persistence) 강화**
   - **색상 변경 즉시 반영**: 설정 창에서 태그 색상 변경 시, 메인 윈도우의 태그 자동완성 목록 및 이미 입력된 태그 칩에도 변경된 색상을 실시간으로 전파하는 로직 추가 (`TagInputWidget.update_color`).
   - **색상 초기화 버그 수정**: 태그를 지우거나 앱을 재시작했을 때 태그 색상이 기본값(파란색)으로 초기화되는 버그 수정. 태그 생성(`add_tag`) 시 DB 및 메모리에 저장된 색상 정보를 우선 조회하여 일관성 유지.
+
+## [2026-02-05] 태그 입력 UI 가시성 수정 (Tag Input UI Visibility Fix)
+- `ui/components/tag_input.py`:
+    - **태그 높이 증가**: 24px -> 28px로 변경하여 텍스트 잘림 현상 해결 및 수직 정렬 개선.
+    - **디자인 개선**: Border Radius를 14px로 증가시켜 더 부드러운 알약(Pill) 형태로 변경.
+    - **가시성 버그 수정**:
+        - 닫기 버튼(x): `background-color: transparent` 강제 적용 및 글로벌 스타일(`padding`) 초기화로 텍스트 잘림 해결. `font-size: 14px`로 가독성 확보.
+        - 태그 텍스트: `QLabel`에 `background-color: transparent`를 명시하여 불필요한 배경색 제거.
+        - **[Hotfix]** 리팩토링 중 누락된 `QLabel` 초기화 코드(`self.label = QLabel(text)`) 복구하여 `AttributeError` 해결.
+    - **자동완성 목록 가시성 개선**: `QCompleter` 팝업 뷰(`QListView`)에 다크 테마 스타일시트 적용(배경 `#252526`, 텍스트 `#cccccc`, 선택 시 `#007acc`).
+    - **태그 텍스트 가시성 개선**: 태그 텍스트 하단에 미세한 검은 줄이 보이는 문제 해결을 위해 `TagLabel`에 `border: none` 및 `QLabel`에 `text-decoration: none` 명시적 적용.
+
+
+
+
