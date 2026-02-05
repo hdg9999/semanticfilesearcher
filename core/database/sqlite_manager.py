@@ -183,8 +183,28 @@ class DatabaseManager:
             # 1. Get file ID
             cursor.execute("SELECT id FROM files WHERE file_path = ?", (file_path,))
             file_row = cursor.fetchone()
-            if not file_row: return
-            file_id = file_row[0]
+            
+            # If file doesn't exist in DB, try to insert it first
+            if not file_row:
+                 if os.path.exists(file_path):
+                     try:
+                         # Simple insertion to ensure file exists in DB
+                         file_name = os.path.basename(file_path)
+                         extension = os.path.splitext(file_path)[1].lower()
+                         mtime = os.path.getmtime(file_path)
+                         
+                         cursor.execute("""
+                            INSERT INTO files (file_path, file_name, extension, last_modified)
+                            VALUES (?, ?, ?, ?)
+                         """, (file_path, file_name, extension, mtime))
+                         file_id = cursor.lastrowid
+                     except Exception as e:
+                         print(f"Error auto-registering file {file_path}: {e}")
+                         return
+                 else:
+                     return # File not found on disk
+            else:
+                file_id = file_row[0]
 
             # 2. Get tag IDs for new tags (create if not exists)
             tag_ids = []

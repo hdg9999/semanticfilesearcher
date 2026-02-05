@@ -152,3 +152,7 @@
     - **컴포넌트 스타일 통합**: 개별 QSS 파일(`tag_input.qss`, `result_item.qss` 등)에 하드코딩된 색상 정보를 제거하고, `dark.qss` 및 `light.qss`로 통합하여 **글로벌 테마 적용** 구조로 개선.
     - **상세 패널(DetailPane) 개선**: 파이썬 코드 내 하드코딩된 스타일(`setStyleSheet`)을 제거하고 `setProperty`와 QSS Selector 방식으로 전환하여 테마별 스타일 자동 적용 구현.
     - **레이아웃 배경색 수정**: `MainWindow`의 주요 컨테이너(`topContainer`, `controlContainer`, `resultContainer`) 및 `ScrollArea`에 테마별 적절한 배경색(`dark` vs `light`) 지정.
+
+- **[HotFix] 태그 관리 기능 오류 수정**
+    - **UI 크래시 수정**: `ui/tag_dialog.py`에서 `QListWidgetItem` 생성 시 태그 정보(튜플)를 그대로 전달하여 발생한 `TypeError` 수정 (튜플 언패킹 적용).
+    - **태그 저장 실패 수정**: `core/database/sqlite_manager.py`의 `update_file_tags` 함수에서 대상 파일이 DB에 없을 경우(`files` 테이블 누락) 태그 저장이 무시되던 문제를 해결하기 위해, 파일이 존재하면 자동으로 등록(Upsert)하도록 로직 개선.

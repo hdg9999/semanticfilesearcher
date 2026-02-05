@@ -52,13 +52,19 @@ class TagSelectionDialog(QDialog):
         self.tag_list.clear()
         self.items = {}
         
-        for tag in all_tags:
-            item = QListWidgetItem(tag)
+        for tag_tuple in all_tags:
+            tag_name = tag_tuple[0]
+            tag_color = tag_tuple[1]
+            
+            item = QListWidgetItem(tag_name)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            check_state = Qt.Checked if tag in file_tags else Qt.Unchecked
+            
+            check_state = Qt.Checked if tag_name in file_tags else Qt.Unchecked
             item.setCheckState(check_state)
+            item.setData(Qt.UserRole, tag_color) # Store color for potential use
+            
             self.tag_list.addItem(item)
-            self.items[tag] = item
+            self.items[tag_name] = item
 
     def _add_new_tag(self):
         tag = self.new_tag_input.text().strip()
