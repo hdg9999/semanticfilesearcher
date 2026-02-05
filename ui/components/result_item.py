@@ -29,6 +29,7 @@ class FileResultWidget(QFrame):
     def _setup_ui(self):
         self.setObjectName("fileResult")
         if self.view_mode == "list":
+            self.setFixedHeight(60)
             layout = QHBoxLayout(self)
         else:
             layout = QVBoxLayout(self)
@@ -65,7 +66,7 @@ class FileResultWidget(QFrame):
             self.path_label.setObjectName("filePathLabel")
             info_layout.addWidget(self.path_label)
             
-            info_layout.addStretch() # Push up
+            info_layout.setAlignment(Qt.AlignVCenter)
             layout.addWidget(info_column, stretch=1)
             
             # 3. Tags Column
@@ -119,7 +120,7 @@ class FileResultWidget(QFrame):
                     # If we only have 1 row of tags, it should just align with Name.
                     pass
 
-                tag_vbox.addStretch()
+                tag_vbox.setAlignment(Qt.AlignVCenter)
                 layout.addWidget(tag_column)
 
         else:
