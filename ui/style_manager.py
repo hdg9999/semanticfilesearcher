@@ -14,6 +14,7 @@ class StyleManager:
             cls._instance = super(StyleManager, cls).__new__(cls)
             cls._instance.base_path = os.path.dirname(os.path.abspath(__file__))
             cls._instance.styles_path = os.path.join(cls._instance.base_path, "resources", "styles")
+            cls._instance.current_theme = "dark"
         return cls._instance
 
     def load_stylesheet(self, relative_path):
@@ -37,9 +38,16 @@ class StyleManager:
             print(f"Stylesheet not found: {full_path}")
             return ""
 
-    def apply_global_style(self, app: QApplication, theme="default"):
+    def apply_global_style(self, app: QApplication, theme=None):
         """Applies the global theme to the QApplication instance."""
-        qss_content = self.load_stylesheet(f"themes/{theme}.qss")
+        if theme:
+            self.current_theme = theme
+        
+        # 'default' maps to 'dark' for backward compatibility, or strictly use 'dark'/'light'
+        if self.current_theme == "default":
+           self.current_theme = "dark"
+
+        qss_content = self.load_stylesheet(f"themes/{self.current_theme}.qss")
         if qss_content:
             app.setStyleSheet(qss_content)
 
@@ -51,3 +59,14 @@ class StyleManager:
                             e.g. "tag_input"
         """
         return self.load_stylesheet(f"components/{component_name}.qss")
+
+    def get_current_theme(self):
+        return self.current_theme
+
+    def get_icon_suffix(self):
+        """
+        Returns the suffix for icons based on the current theme.
+        Dark theme uses white icons (_white.svg).
+        Light theme uses dark icons (.svg).
+        """
+        return "_white" if self.current_theme == "dark" else ""

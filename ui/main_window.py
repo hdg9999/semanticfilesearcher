@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QListWidget, QLabel, 
                              QFileDialog, QListWidgetItem, QMessageBox, QProgressBar,
-                             QComboBox, QScrollArea, QFrame, QSplitter)
+                             QComboBox, QScrollArea, QFrame, QSplitter, QApplication)
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer
 from PySide6.QtGui import QFont, QAction, QDesktopServices, QIcon, QPixmap
 from ui.workers import IndexingWorker
@@ -21,7 +21,11 @@ class MainWindow(QMainWindow):
         
         # Load component style
         from ui.style_manager import StyleManager
-        style = StyleManager().get_component_style("main_window")
+        self.style_manager = StyleManager()
+        # Initial theme application will be done after UI initialization
+
+        # Load specific component style for main window customization if needed
+        style = self.style_manager.get_component_style("main_window")
         if style:
             self.setStyleSheet(self.styleSheet() + "\n" + style)
 
@@ -113,6 +117,7 @@ class MainWindow(QMainWindow):
 
         # 3행: 뷰 모드 컨트롤 바 (검색 모드 아래, 결과창 위)
         control_container = QWidget()
+        control_container.setObjectName("controlContainer")
         control_layout = QHBoxLayout(control_container)
         control_layout.setContentsMargins(20, 5, 20, 5)
         
@@ -206,6 +211,10 @@ class MainWindow(QMainWindow):
 
         self._create_menu_bar()
         self.refresh_tag_completer() # Initialize completer
+        
+        # Apply theme after all UI components are initialized
+        self.apply_theme("dark")
+        
         self.check_initial_indexing()
         
         # 큐 상태 폴링 타이머
@@ -370,8 +379,44 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
+        # 편집 메뉴
+        edit_menu = menubar.addMenu("편집(&E)")
+        
+        # 테마 서브 메뉴
+        theme_menu = edit_menu.addMenu("테마(&T)")
+        
+        dark_action = QAction("다크 모드", self)
+        dark_action.triggered.connect(lambda: self.apply_theme("dark"))
+        theme_menu.addAction(dark_action)
+        
+        light_action = QAction("라이트 모드", self)
+        light_action.triggered.connect(lambda: self.apply_theme("light"))
+        theme_menu.addAction(light_action)
+
     def show_settings(self):
         dialog = SettingsDialog(self.indexer, self)
         dialog.exec()
         # 설정 창이 닫힌 후 태그 정보(색상 등)가 변경되었을 수 있으므로 갱신
         self.refresh_tag_completer()
+
+    def apply_theme(self, theme_name):
+        self.style_manager.apply_global_style(QApplication.instance(), theme_name)
+        self.update_icons()
+        
+        # Force update tag input colors if needed (though predominantly handled by QSS)
+        # Re-apply current search to refresh result widgets with new styles
+        self.perform_search()
+
+    def update_icons(self):
+        suffix = self.style_manager.get_icon_suffix()
+        
+        # Update Queue Button
+        self.queue_btn.setIcon(QIcon(f"ui/resources/icons/queue{suffix}.svg"))
+        
+        # Update View Mode Buttons
+        self.view_list_btn.setIcon(QIcon(f"ui/resources/icons/list_view{suffix}.svg"))
+        self.view_icon_btn.setIcon(QIcon(f"ui/resources/icons/icon_view{suffix}.svg"))
+        
+        # Update Sidebar Toggle Button
+        self.toggle_detail_btn.setIcon(QIcon(f"ui/resources/icons/sidebar_toggle{suffix}.svg"))
+

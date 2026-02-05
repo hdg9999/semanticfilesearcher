@@ -1,0 +1,280 @@
+/* Global Light Theme QSS */
+
+QWidget {
+    color: #333333;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+QMainWindow, QDialog {
+    background-color: #f3f3f3;
+}
+
+/* Inputs and Buttons */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 8px;
+    color: #333333;
+}
+
+QPushButton {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 8px 15px;
+    font-weight: bold;
+    color: #333333;
+}
+
+QPushButton:hover {
+    background-color: #e6e6e6;
+}
+
+QPushButton#important {
+    background-color: #0078d4;
+    border: none;
+    color: #ffffff;
+}
+
+QPushButton#important:hover {
+    background-color: #106ebe;
+}
+
+/* Lists and Tables */
+QListWidget, QTableWidget, QTreeWidget {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    outline: none;
+    color: #333333;
+}
+
+QListWidget::item {
+    padding: 10px;
+    border-bottom: 1px solid #eeeeee;
+}
+
+QListWidget::item:selected {
+    background-color: #e6f7ff;
+    color: #333333;
+}
+
+/* Tabs */
+QTabWidget::pane {
+    border: 1px solid #cccccc;
+    background-color: #ffffff;
+}
+
+QTabBar::tab {
+    background-color: #e0e0e0;
+    padding: 8px 15px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-right: 2px;
+    color: #333333;
+}
+
+QTabBar::tab:selected {
+    background-color: #0078d4;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* Menus */
+QMenuBar {
+    background-color: #f3f3f3;
+    border-bottom: 1px solid #cccccc;
+    color: #333333;
+}
+
+QMenuBar::item {
+    padding: 5px 10px;
+    background: transparent;
+}
+
+QMenuBar::item:selected {
+    background-color: #e0e0e0;
+}
+
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    color: #333333;
+}
+
+QMenu::item {
+    padding: 5px 25px 5px 20px;
+}
+
+QMenu::item:selected {
+    background-color: #0078d4;
+    color: #ffffff;
+}
+
+/* Combo Box (Dropdown) */
+QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 5px;
+    color: #333333;
+    min-width: 6em;
+}
+
+QComboBox:on { /* when the combo box is open */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    selection-background-color: #0078d4;
+    selection-color: #ffffff;
+    color: #333333;
+    outline: none;
+}
+
+/* Progress Bar */
+QProgressBar {
+    background-color: #e0e0e0;
+    border: none;
+    border-radius: 4px;
+    text-align: center;
+    color: #333333;
+}
+
+QProgressBar::chunk {
+    background-color: #0078d4;
+    border-radius: 4px;
+}
+
+/* Labels and Miscellaneous */
+QLabel {
+    color: #333333;
+}
+
+QMessageBox {
+    background-color: #f3f3f3;
+}
+
+QMessageBox QLabel {
+    color: #333333;
+}
+
+/* Specific Widgets */
+QWidget#resultContainer {
+    background-color: #ffffff;
+}
+
+QWidget#topContainer, QWidget#tagContainer, QWidget#controlContainer {
+     background-color: #f3f3f3;
+     border-bottom: 1px solid #cccccc;
+}
+
+QWidget#statusContainer {
+     background-color: #f3f3f3;
+     border-top: 1px solid #cccccc;
+}
+
+QScrollArea#resultArea {
+    border: none;
+    background-color: #ffffff;
+}
+
+QLabel#statusLabel {
+    color: #666666;
+    font-size: 12px;
+}
+
+/* Detail Pane */
+QFrame#detailPane {
+    border-left: 1px solid #cccccc;
+    background-color: #f3f3f3;
+}
+
+QLabel[labelType="icon"] {
+    font-size: 64px;
+    margin-bottom: 10px;
+    color: #333333;
+}
+
+QLabel[labelType="fileName"] {
+    font-weight: bold;
+    font-size: 16px;
+    color: #333333;
+}
+
+QLabel[labelType="sectionTitle"] {
+    color: #666666;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+QLabel[labelType="sectionValue"] {
+    color: #333333;
+    font-size: 12px;
+}
+
+/* =================================================================================
+   Component Styles (Moved from individual QSS files)
+   ================================================================================= */
+
+/* TagInputWidget */
+TagInputWidget {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+}
+
+TagInputWidget QLineEdit {
+    background-color: transparent;
+    border: none;
+    color: #333333;
+    selection-background-color: #0078d4;
+    selection-color: #ffffff;
+}
+
+/* Completer Popup */
+QListView#tagCompleterPopup {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    outline: none;
+}
+
+QListView#tagCompleterPopup::item {
+    padding: 4px;
+}
+
+QListView#tagCompleterPopup::item:selected {
+    background-color: #e6f7ff;
+    color: #333333;
+}
+
+/* FileResultWidget */
+#fileResult {
+    background-color: transparent;
+    border-radius: 4px;
+}
+
+#fileResult[selected="true"] {
+    background-color: #e6f7ff; 
+}
+
+QLabel#fileNameLabel {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333333;
+}
+
+QLabel#filePathLabel {
+    color: #666666;
+    font-size: 11px;
+}
+
+QLabel#fileNameLabelIconMode {
+    font-size: 12px;
+    color: #333333;
+}

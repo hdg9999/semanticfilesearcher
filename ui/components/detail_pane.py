@@ -8,7 +8,6 @@ class DetailPane(QFrame):
         super().__init__(parent)
         self.setMinimumWidth(180)
         self.setObjectName("detailPane")
-        self.setStyleSheet("#detailPane { border-left: 1px solid #333333; background-color: #1e1e1e; }")
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(15, 20, 15, 20)
@@ -16,12 +15,12 @@ class DetailPane(QFrame):
         
         self.icon_label = QLabel("📄")
         self.icon_label.setAlignment(Qt.AlignCenter)
-        self.icon_label.setStyleSheet("font-size: 64px; margin-bottom: 10px;")
+        self.icon_label.setProperty("labelType", "icon")
         layout.addWidget(self.icon_label)
         
         self.name_label = QLabel("파일을 선택하세요")
         self.name_label.setWordWrap(True)
-        self.name_label.setStyleSheet("font-weight: bold; font-size: 16px; color: white;")
+        self.name_label.setProperty("labelType", "fileName")
         layout.addWidget(self.name_label)
         
         layout.addWidget(self._create_section("경로", "path_label"))
@@ -37,11 +36,11 @@ class DetailPane(QFrame):
         vbox.setSpacing(5)
         
         title_lbl = QLabel(title)
-        title_lbl.setStyleSheet("color: #888888; font-size: 11px; text-transform: uppercase;")
+        title_lbl.setProperty("labelType", "sectionTitle")
         
         val_lbl = QLabel("-")
         val_lbl.setWordWrap(True)
-        val_lbl.setStyleSheet("color: #dddddd; font-size: 12px;")
+        val_lbl.setProperty("labelType", "sectionValue")
         
         setattr(self, attr_name, val_lbl)
         vbox.addWidget(title_lbl)

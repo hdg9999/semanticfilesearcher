@@ -137,3 +137,18 @@
 ## [2026-02-05] Hotfix: 검색 결과창(QScrollArea) 배경색 버그 수정
 - `ui/main_window.py`: 결과 컨테이너 위젯(`result_container`)에 `setObjectName("resultContainer")` 추가
 - `ui/resources/styles/components/main_window.qss`: `QWidget#resultContainer` 스타일 추가 (`background-color: #252526`)
+
+## [2026-02-05] 테마 선택 기능 추가 (Theme Selection Feature)
+- **라이트 모드(Light Mode) 지원**
+    - `ui/resources/styles/themes/light.qss`: 라이트 테마 스타일시트 신규 생성 (기존 다크 테마 색상 반전).
+    - `ui/resources/icons/`: 라이트 모드용 다크 아이콘(`sidebar_toggle.svg`, `queue.svg` 등) 추가.
+- **테마 전환 기능 구현**
+    - `ui/style_manager.py`: `current_theme` 관리 및 아이콘 접미사(`_white` vs none) 반환 로직 추가.
+        - [Fix] Singleton 패턴 초기화 버그 수정 (`__init__` -> `__new__`).
+    - `ui/main_window.py`: 상단 메뉴바에 [편집] -> [테마] 메뉴 추가.
+        - 테마 변경 시 스타일시트 재로딩 및 아이콘(View Mode, Sidebar, Queue) 즉시 갱신 구현.
+
+- **[Improvement] 라이트 모드 스타일링 고도화 (Light Mode Refinement)**
+    - **컴포넌트 스타일 통합**: 개별 QSS 파일(`tag_input.qss`, `result_item.qss` 등)에 하드코딩된 색상 정보를 제거하고, `dark.qss` 및 `light.qss`로 통합하여 **글로벌 테마 적용** 구조로 개선.
+    - **상세 패널(DetailPane) 개선**: 파이썬 코드 내 하드코딩된 스타일(`setStyleSheet`)을 제거하고 `setProperty`와 QSS Selector 방식으로 전환하여 테마별 스타일 자동 적용 구현.
+    - **레이아웃 배경색 수정**: `MainWindow`의 주요 컨테이너(`topContainer`, `controlContainer`, `resultContainer`) 및 `ScrollArea`에 테마별 적절한 배경색(`dark` vs `light`) 지정.
