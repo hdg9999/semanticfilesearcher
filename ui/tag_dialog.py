@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
-                             QListWidget, QListWidgetItem, QCheckBox, QLabel, 
-                             QLineEdit, QMessageBox)
+                             QScrollArea, QWidget, QLabel, QLineEdit, QMessageBox)
 from PySide6.QtCore import Qt
+from ui.components.tag_input import CheckableTagChip
+from ui.components.flow_layout import FlowLayout
 
 class TagSelectionDialog(QDialog):
     def __init__(self, indexer, file_path, parent=None):
@@ -9,19 +10,40 @@ class TagSelectionDialog(QDialog):
         self.indexer = indexer
         self.file_path = file_path
         self.setWindowTitle("태그 관리")
-        self.resize(400, 500)
+        self.resize(450, 550) # Slightly larger for better chip layout
         
         self.layout = QVBoxLayout(self)
+        self.layout.setSpacing(10)
         
-        # 안내 문구
-        self.layout.addWidget(QLabel(f"파일: {file_path}"))
-        self.layout.addWidget(QLabel("적용할 태그를 선택하세요:"))
+        # 안내 문구 및 파일명
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(4)
+        file_label = QLabel(f"파일: {file_path}")
+        file_label.setStyleSheet("font-weight: bold; color: #666;")
+        file_label.setWordWrap(True)
+        header_layout.addWidget(file_label)
+        header_layout.addWidget(QLabel("적용할 태그를 선택하세요:"))
+        self.layout.addLayout(header_layout)
         
-        # 태그 목록
-        self.tag_list = QListWidget()
-        self.items = {} # tag_name: item mapping
+        # 필터 입력창
+        self.filter_input = QLineEdit()
+        self.filter_input.setPlaceholderText("태그 검색...")
+        self.filter_input.textChanged.connect(self._filter_tags)
+        self.layout.addWidget(self.filter_input)
+        
+        # 태그 영역 (ScrollArea + FlowLayout)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QScrollArea.NoFrame)
+        
+        self.tag_container = QWidget()
+        self.tag_layout = FlowLayout(self.tag_container, margin=0, spacing=6)
+        self.scroll_area.setWidget(self.tag_container)
+        
+        self.layout.addWidget(self.scroll_area)
+        
+        self.chips = {} # tag_name: CheckableTagChip
         self._load_tags()
-        self.layout.addWidget(self.tag_list)
         
         # 새 태그 추가
         add_layout = QHBoxLayout()
@@ -46,55 +68,61 @@ class TagSelectionDialog(QDialog):
         self.layout.addLayout(btn_layout)
 
     def _load_tags(self):
+        # Clear existing items
+        while self.tag_layout.count():
+            item = self.tag_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        self.chips = {}
+        
         all_tags = self.indexer.db.get_all_tags()
         file_tags = self.indexer.db.get_tags_for_file(self.file_path)
-        
-        self.tag_list.clear()
-        self.items = {}
         
         for tag_tuple in all_tags:
             tag_name = tag_tuple[0]
             tag_color = tag_tuple[1]
             
-            item = QListWidgetItem(tag_name)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            is_checked = tag_name in file_tags
+            chip = CheckableTagChip(tag_name, color=tag_color, checked=is_checked)
             
-            check_state = Qt.Checked if tag_name in file_tags else Qt.Unchecked
-            item.setCheckState(check_state)
-            item.setData(Qt.UserRole, tag_color) # Store color for potential use
-            
-            self.tag_list.addItem(item)
-            self.items[tag_name] = item
+            self.tag_layout.addWidget(chip)
+            self.chips[tag_name] = chip
+
+    def _filter_tags(self, text):
+        text = text.strip().lower()
+        for tag_name, chip in self.chips.items():
+            if text in tag_name.lower():
+                chip.show()
+            else:
+                chip.hide()
 
     def _add_new_tag(self):
         tag = self.new_tag_input.text().strip()
         if not tag: return
         
-        if tag in self.items:
+        if tag in self.chips:
             QMessageBox.warning(self, "경고", "이미 존재하는 태그입니다.")
             return
 
-        # DB에 추가는 저장 시점에 하는게 깔끔하지만, 
-        # 여기서는 즉시 목록에 반영해야 하므로 미리 DB에 추가하지 않고 UI 리스트에만 추가할 수도 있음.
-        # 하지만 일관성을 위해 DB에 바로 추가하고 리로드하겠습니다.
-        # 혹은 UI에만 추가했다가 저장을 누르면 한꺼번에 처리하는게 롤백 관점에서 좋음.
-        # 기존 로직과 단순함을 위해 DB 즉시 추가를 방지하고 UI 아이템으로 추가함.
-        # 하지만 다른 파일에서도 써야하므로, 새 태그는 '전역 태그'로 간주하고 DB에 추가하는 것이 일반적임.
-        
+        # 새 태그 DB에 추가
         self.indexer.db.add_tag(tag)
-        self.new_tag_input.clear()
-        self._load_tags() # 리로드
         
-        # 방금 추가한 태그는 체크 상태로
-        if tag in self.items:
-            self.items[tag].setCheckState(Qt.Checked)
+        # UI 업데이트 (전체 리로드 대신 최적화 가능하지만, 색상 등 일관성을 위해 리로드)
+        self.new_tag_input.clear()
+        self.filter_input.clear() # 필터 초기화하여 새 태그 보이게 함
+        self._load_tags()
+        
+        # 방금 추가한 태그 자동 선택
+        if tag in self.chips:
+            self.chips[tag].set_checked(True)
+            # 스크롤을 맨 아래로? FlowLayout이라 위치 보장 어려움.
 
     def _save_tags(self):
         selected_tags = []
-        for i in range(self.tag_list.count()):
-            item = self.tag_list.item(i)
-            if item.checkState() == Qt.Checked:
-                selected_tags.append(item.text())
+        for tag_name, chip in self.chips.items():
+            if chip.is_checked:
+                selected_tags.append(tag_name)
         
         self.indexer.db.update_file_tags(self.file_path, selected_tags)
         self.accept()

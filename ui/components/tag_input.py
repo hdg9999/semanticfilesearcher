@@ -81,6 +81,65 @@ class TagLabel(QFrame):
             }}
         """)
 
+class CheckableTagChip(QFrame):
+    toggled = Signal(bool)
+
+    def __init__(self, text, color="#007acc", checked=False, parent=None):
+        super().__init__(parent)
+        self.text = text
+        self.base_color = color
+        self.is_checked = checked
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 6, 12, 6)
+        layout.setSpacing(0)
+        
+        self.label = QLabel(text)
+        self.label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.label)
+        
+        self.setCursor(Qt.PointingHandCursor)
+        self.update_style()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.is_checked = not self.is_checked
+            self.update_style()
+            self.toggled.emit(self.is_checked)
+        super().mousePressEvent(event)
+
+    def set_checked(self, checked):
+        if self.is_checked != checked:
+            self.is_checked = checked
+            self.update_style()
+            self.toggled.emit(self.is_checked)
+
+    def update_style(self):
+        # Determine text color based on background luminance for better contrast
+        if self.is_checked:
+            bg_color = QColor(self.base_color)
+            luminance = (0.299 * bg_color.red() + 0.587 * bg_color.green() + 0.114 * bg_color.blue())
+            text_color = "black" if luminance > 128 else "white"
+            
+            self.setStyleSheet(f"""
+                CheckableTagChip {{
+                    background-color: {self.base_color};
+                    border: 1px solid {self.base_color};
+                    border-radius: 14px;
+                }}
+            """)
+            self.label.setStyleSheet(f"color: {text_color}; font-weight: bold; background-color: transparent; border: none;")
+        else:
+            # Unchecked: transparent background, colored border and text
+            self.setStyleSheet(f"""
+                CheckableTagChip {{
+                    background-color: transparent;
+                    border: 1px solid {self.base_color};
+                    border-radius: 14px;
+                }}
+            """)
+            self.label.setStyleSheet(f"color: {self.base_color}; font-weight: bold; background-color: transparent; border: none;")
+
 class TagInputWidget(QFrame):
     tags_changed = Signal(list)
     return_pressed = Signal() # Enter key pressed in input
