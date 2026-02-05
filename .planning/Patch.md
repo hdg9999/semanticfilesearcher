@@ -161,3 +161,7 @@
 - **[HotFix] 태그 관리 기능 오류 수정**
     - **UI 크래시 수정**: `ui/tag_dialog.py`에서 `QListWidgetItem` 생성 시 태그 정보(튜플)를 그대로 전달하여 발생한 `TypeError` 수정 (튜플 언패킹 적용).
     - **태그 저장 실패 수정**: `core/database/sqlite_manager.py`의 `update_file_tags` 함수에서 대상 파일이 DB에 없을 경우(`files` 테이블 누락) 태그 저장이 무시되던 문제를 해결하기 위해, 파일이 존재하면 자동으로 등록(Upsert)하도록 로직 개선.
+
+## [2026-02-05] AutoTagger 태그 생성 오류 수정
+- **버그 수정**: `indexer.py`에서 AutoTagger 호출 시 태그 목록을 튜플 리스트(`[(name, color), ...]`) 그대로 전달하여 TypeError가 발생하는 문제 수정.
+- **개선**: `db.get_all_tags()`의 반환값에서 태그 이름만 추출하여 AutoTagger에 전달하도록 변경 (`[tag[0] for tag in tags]`).

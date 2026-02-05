@@ -186,7 +186,7 @@ class SemanticIndexer:
                             self.scanner.process_file(task.path)
                             # 태그 생성
                             try:
-                                tags = self.tagger.generate_tags(task.path, self.db.get_all_tags())
+                                tags = self.tagger.generate_tags(task.path, [tag[0] for tag in self.db.get_all_tags()])
                                 for tag in tags:
                                     self.db.link_file_tag(task.path, tag)
                             except Exception as e:
