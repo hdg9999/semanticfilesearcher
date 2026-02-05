@@ -271,14 +271,21 @@ class MainWindow(QMainWindow):
         
         for res in results:
             path = res['file_path']
-            widget = FileResultWidget(path, view_mode=self.view_mode)
+            tags = res.get('tags', [])
+            widget = FileResultWidget(path, view_mode=self.view_mode, tags=tags)
             widget.clicked.connect(self.on_file_clicked)
             widget.double_clicked.connect(self.on_file_double_clicked)
             widget.manage_tags_requested.connect(self.open_file_tag_dialog)
+            widget.tag_clicked.connect(self.add_tag_to_search)
             self.result_layout.addWidget(widget)
             
         self.status_label.setText(f"검색 완료: {len(results)}개의 결과")
         self.selected_item = None # Reset selection on new search
+
+    def add_tag_to_search(self, tag_name):
+        self.tag_input.add_tag(tag_name)
+        # Optional: Scroll to top or give feedback?
+        # For now, just add it. The user can press enter to search again with the new tag.
 
     def toggle_detail_pane(self, checked):
         self.detail_pane.setVisible(checked)

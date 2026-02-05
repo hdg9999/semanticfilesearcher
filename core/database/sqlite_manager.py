@@ -161,6 +161,34 @@ class DatabaseManager:
             """, (file_path,))
             return [row[0] for row in cursor.fetchall()]
 
+    def get_tags_for_files(self, file_paths):
+        """
+        Retrieves tags for a list of files efficiently.
+        Returns: Dict[str, List[Tuple[str, str]]] -> {file_path: [(tag_name, tag_color), ...]}
+        """
+        if not file_paths:
+            return {}
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            placeholders = ",".join(["?"] * len(file_paths))
+            query = f"""
+                SELECT f.file_path, t.name, t.color 
+                FROM files f
+                JOIN file_tags ft ON f.id = ft.file_id
+                JOIN tags t ON ft.tag_id = t.id
+                WHERE f.file_path IN ({placeholders})
+            """
+            cursor.execute(query, file_paths)
+            
+            result = {}
+            for row in cursor.fetchall():
+                path, tag_name, tag_color = row
+                if path not in result:
+                    result[path] = []
+                result[path].append((tag_name, tag_color))
+            return result
+
     def delete_tag(self, tag_name):
         with self._get_connection() as conn:
             cursor = conn.cursor()

@@ -146,6 +146,14 @@ class SemanticIndexer:
                 
             filtered_results.append(res)
             
+        # 5. 검색 결과에 태그 정보 포함 (배치 조회)
+        if filtered_results:
+            file_paths = [res['file_path'] for res in filtered_results]
+            tags_map = self.db.get_tags_for_files(file_paths)
+            
+            for res in filtered_results:
+                res['tags'] = tags_map.get(res['file_path'], [])
+            
         return filtered_results
 
     def _on_change(self, file_path, action):
