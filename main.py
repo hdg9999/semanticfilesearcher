@@ -13,11 +13,9 @@ def main():
     app = QApplication(sys.argv)
     
     # 글로벌 스타일시트 적용
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    qss_path = os.path.join(current_dir, "ui", "resources", "style.qss")
-    if os.path.exists(qss_path):
-        with open(qss_path, "r", encoding="utf-8") as f:
-            app.setStyleSheet(f.read())
+    # 글로벌 스타일시트 적용
+    from ui.style_manager import StyleManager
+    StyleManager().apply_global_style(app)
     
     window = MainWindow(indexer)
     window.show()

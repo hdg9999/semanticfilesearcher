@@ -89,14 +89,13 @@ class TagInputWidget(QFrame):
         super().__init__(parent)
         self.tags = []
         
-        # Style
-        self.setStyleSheet("""
-            TagInputWidget {
-                background-color: #252526;
-                border: 1px solid #3e3e42;
-                border-radius: 4px;
-            }
-        """)
+        self.tags = []
+        
+        # Load style
+        from ui.style_manager import StyleManager
+        style = StyleManager().get_component_style("tag_input")
+        if style:
+            self.setStyleSheet(style)
         
         self.flow_layout = FlowLayout(self, margin=4, spacing=4)
         
@@ -104,14 +103,7 @@ class TagInputWidget(QFrame):
         self.input_edit.setPlaceholderText("태그 입력...")
         self.input_edit.setMinimumWidth(100) # Ensure it has some width
         self.input_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.input_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: transparent;
-                border: none;
-                color: #cccccc;
-                selection-background-color: #007acc;
-            }
-        """)
+        # Styles for QLineEdit are in tag_input.qss
         self.input_edit.returnPressed.connect(self.handle_return)
         self.input_edit.textChanged.connect(self.handle_text_changed)
         # Install event filter to capture backspace
@@ -140,21 +132,12 @@ class TagInputWidget(QFrame):
         
         # Style the popup
         popup = self.completer.popup()
-        popup.setStyleSheet("""
-            QListView {
-                background-color: #252526;
-                color: #cccccc;
-                border: 1px solid #3e3e42;
-                outline: none;
-            }
-            QListView::item {
-                padding: 4px;
-            }
-            QListView::item:selected {
-                background-color: #007acc;
-                color: #ffffff;
-            }
-        """)
+        popup.setObjectName("tagCompleterPopup")
+        
+        from ui.style_manager import StyleManager
+        style = StyleManager().get_component_style("tag_input")
+        if style:
+            popup.setStyleSheet(style)
         
         self.input_edit.setCompleter(self.completer)
         # Handle selection from completer

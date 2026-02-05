@@ -1,0 +1,26 @@
+/* File Result Widget Container */
+#fileResult {
+    background-color: transparent;
+    border-radius: 4px;
+}
+
+#fileResult[selected="true"] {
+    background-color: #37373d; 
+}
+
+/* Name Label */
+QLabel#fileNameLabel {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* Path Label */
+QLabel#filePathLabel {
+    color: #888888;
+    font-size: 11px;
+}
+
+/* Icon Mode Label */
+QLabel#fileNameLabelIconMode {
+    font-size: 12px;
+}

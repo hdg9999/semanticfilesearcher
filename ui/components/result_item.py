@@ -17,6 +17,12 @@ class FileResultWidget(QFrame):
         
         self.setMouseTracking(True)
         self._setup_ui()
+        
+        # Load style
+        from ui.style_manager import StyleManager
+        style = StyleManager().get_component_style("result_item")
+        if style:
+            self.setStyleSheet(style)
 
     def _setup_ui(self):
         self.setObjectName("fileResult")
@@ -41,12 +47,15 @@ class FileResultWidget(QFrame):
         # 정보 영역
         info_layout = QVBoxLayout()
         self.name_label = QLabel(self.file_name)
-        self.name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        if self.view_mode == "list":
+             self.name_label.setObjectName("fileNameLabel")
+        else:
+             self.name_label.setObjectName("fileNameLabelIconMode")
         
         if self.view_mode == "list":
             info_layout.addWidget(self.name_label)
             self.path_label = QLabel(self.file_path)
-            self.path_label.setStyleSheet("color: #888888; font-size: 11px;")
+            self.path_label.setObjectName("filePathLabel")
             info_layout.addWidget(self.path_label)
             layout.addLayout(info_layout, stretch=1)
         else:
@@ -54,7 +63,7 @@ class FileResultWidget(QFrame):
             self.setFixedSize(120, 140)
             self.name_label.setAlignment(Qt.AlignCenter)
             self.name_label.setWordWrap(True) # 긴 파일명 줄바꿈
-            self.name_label.setStyleSheet("font-size: 12px;") # 폰트 크기 조정
+            # Style handled by QSS via ObjectName
             info_layout.addWidget(self.name_label)
             layout.addLayout(info_layout)
             
@@ -77,11 +86,13 @@ class FileResultWidget(QFrame):
         layout.addWidget(self.actions_widget, alignment=Qt.AlignCenter)
 
     def set_selected(self, selected):
+        self.setProperty("selected", selected)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        
         if selected:
-            self.setStyleSheet("#fileResult { background-color: #37373d; border-radius: 4px; }")
             self.actions_widget.setVisible(True)
         else:
-            self.setStyleSheet("#fileResult { background-color: transparent; }")
             self.actions_widget.setVisible(False)
 
     def mousePressEvent(self, event):

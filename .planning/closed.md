@@ -184,5 +184,27 @@
 - [x] 태그 입력 자동완성 리스트 가시성 개선
     - 흰 바탕에 하얀색 글씨라서 가시성이 좋지 않음. 현재 전체적으로 다크 모드 느낌으로 구현되어있으므로 일관성 있는 디자인으로 가시성 개선 필요.
 
+### 스타일 시트 관리 구조 리팩토링
+- 향후 UI 스타일 관리 용이성 확보를 위한 사전 리팩토링 수행. 스타일 시트를 ui/resources/styles 폴더 내 qss 파일로 관리.
+    1) ui/resources/styles/themes : 전역 기본 스타일 정보. 이 프로그램 내 모든 UI 컴포넌트는 기본적으로 이 스타일을 적용해야함.
+    2) ui/resources/styles/components : UI 컴포넌트별 기본 스타일 정보.
+
+    (스타일 시트 관련 폴더 구조)
+
+    ```
+    semanticfilesearcher/
+    ...
+    ├──ui
+    │  └──resources
+    │     └──styles
+    │        └──themes
+    │        └──components
+    ...
+    ```
+    - [x] ui/resources/styles/themes 폴더 내로 현재 style.qss 파일 이동 후 본 프로그램 내 참조 경로도 수정.
+    - [x] UI 관련 소스코드 내에 개별적으로 setStyleSheet() 안에 하드 코딩된 스타일 정보는 전부 별도 qss 파일로 빼서 참조하도록 하고, 소스코드 내에 스타일 정보가 하드코딩되지 않도록 수정.
+        * (중요) 개별적인 컴포넌트 파일 내에서 사용되는 qss는 ui/resources/styles/themes 내 qss에 의한 스타일보다 적용 우선도가 높아야 함.
+    - [x] 태그 칩과 관련된 스타일은 글로벌 테마와 상관 없이 항상 같은 스타일을 적용할 것이므로 별도 qss 파일로 분리.
+
 ### 구글 ai 패키지 이슈
 - [x] google-generativeai 패키지에서 google-genai로 교체해야함.

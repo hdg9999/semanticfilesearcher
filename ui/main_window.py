@@ -19,6 +19,12 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Semantic File Searcher")
         self.resize(1200, 850)
         
+        # Load component style
+        from ui.style_manager import StyleManager
+        style = StyleManager().get_component_style("main_window")
+        if style:
+            self.setStyleSheet(self.styleSheet() + "\n" + style)
+
         self.completer = None
         self.tag_colors = {} # Initialize tag_colors dictionary
         self.worker = None
@@ -33,7 +39,7 @@ class MainWindow(QMainWindow):
 
         # 상단 도구 모음 및 검색 바 영역
         top_container = QWidget()
-        top_container.setStyleSheet("background-color: #1e1e1e; border-bottom: 1px solid #333333;")
+        top_container.setObjectName("topContainer")
         top_layout = QVBoxLayout(top_container)
         top_layout.setContentsMargins(20, 10, 20, 10)
 
@@ -82,7 +88,7 @@ class MainWindow(QMainWindow):
 
         # 2.5행: 태그 검색 바 (새로 추가)
         tag_container = QWidget()
-        tag_container.setStyleSheet("background-color: #1e1e1e; border-bottom: 1px solid #333333;")
+        tag_container.setObjectName("tagContainer")
         tag_layout = QHBoxLayout(tag_container)
         tag_layout.setContentsMargins(20, 5, 20, 10)
         
@@ -148,10 +154,11 @@ class MainWindow(QMainWindow):
         
         # 결과 리스트 (Scroll Area 사용)
         self.scroll_area = QScrollArea()
+        self.scroll_area.setObjectName("resultArea")
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setStyleSheet("border: none; background-color: #252526;")
         
         self.result_container = QWidget()
+        self.result_container.setObjectName("resultContainer")
         self.result_layout = QVBoxLayout(self.result_container)
         self.result_layout.setAlignment(Qt.AlignTop)
         self.scroll_area.setWidget(self.result_container)
@@ -174,7 +181,7 @@ class MainWindow(QMainWindow):
 
         # 하단 상태 바
         status_container = QWidget()
-        status_container.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #333333;")
+        status_container.setObjectName("statusContainer")
         status_layout = QHBoxLayout(status_container) # QV -> QH for button
         status_layout.setContentsMargins(10, 5, 10, 5)
         
@@ -185,7 +192,7 @@ class MainWindow(QMainWindow):
         status_layout.addWidget(self.progress_bar)
         
         self.status_label = QLabel("준비 완료")
-        self.status_label.setStyleSheet("color: #aaaaaa; font-size: 12px;")
+        self.status_label.setObjectName("statusLabel")
         status_layout.addWidget(self.status_label)
         
         status_layout.addStretch()
@@ -242,6 +249,7 @@ class MainWindow(QMainWindow):
         from ui.components.flow_layout import FlowLayout
 
         new_container = QWidget()
+        new_container.setObjectName("resultContainer")
         if self.view_mode == "list":
             self.result_layout = QVBoxLayout(new_container)
             self.result_layout.setAlignment(Qt.AlignTop)

@@ -128,6 +128,12 @@
     - **자동완성 목록 가시성 개선**: `QCompleter` 팝업 뷰(`QListView`)에 다크 테마 스타일시트 적용(배경 `#252526`, 텍스트 `#cccccc`, 선택 시 `#007acc`).
     - **태그 텍스트 가시성 개선**: 태그 텍스트 하단에 미세한 검은 줄이 보이는 문제 해결을 위해 `TagLabel`에 `border: none` 및 `QLabel`에 `text-decoration: none` 명시적 적용.
 
+## [2026-02-05] 스타일 시트 리팩토링 (Stylesheet Refactoring)
+- **시스템 도입**: `ui/style_manager.py`를 통한 스타일 로딩 중앙 관리 구현.
+- **구조 변경**: `ui/resources/styles/` 내 `themes`와 `components`로 QSS 파일 분리 및 모듈화.
+- **리팩토링**: `main.py`, `ui/main_window.py`, `ui/components/tag_input.py`, `ui/components/result_item.py` 내의 하드코딩된 스타일을 모두 제거하고 외부 QSS 파일로 이관.
+- **개선**: `FileResultWidget`의 선택 상태(Selected)를 동적 속성(Property) 기반으로 변경하여 스타일 관리 효율성 증대.
 
-
-
+## [2026-02-05] Hotfix: 검색 결과창(QScrollArea) 배경색 버그 수정
+- `ui/main_window.py`: 결과 컨테이너 위젯(`result_container`)에 `setObjectName("resultContainer")` 추가
+- `ui/resources/styles/components/main_window.qss`: `QWidget#resultContainer` 스타일 추가 (`background-color: #252526`)
