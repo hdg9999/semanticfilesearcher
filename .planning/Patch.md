@@ -186,3 +186,11 @@
 - **태그 칩(Chip) 적용**: `ui/tag_dialog.py`의 리스트 위젯을 `CheckableTagChip`(`ui/components/tag_input.py`) 기반의 `FlowLayout`으로 변경하여 시인성 개선.
 - **태그 필터링 기능**: 상단 검색바를 추가하여 실시간으로 태그 목록 필터링 지원.
 - **통합 디자인**: 기존 DB 색상 연동 및 선택 상태 시각화 강화.
+
+## [2026-02-07] 앱 아이콘 적용
+- **아이콘 생성**: 사용자가 제공한 `Image (1).webp` (투명 배경) 파일을 `assets/icon.png`로 변환하여 적용
+- **UI 적용**: `MainWindow` 제목 표시줄에 생성된 아이콘 (`assets/icon.png`) 적용
+
+### 아이콘 적용 이슈 해결
+- `ui/main_window.py`: 아이콘 경로를 절대 경로(실행 파일 기준)로 탐색하도록 수정하여 로딩 안정성 확보.
+- `main.py`: Windows 작업 표시줄에 아이콘이 정상적으로 표시되도록 `AppUserModelID` 설정 코드 추가.

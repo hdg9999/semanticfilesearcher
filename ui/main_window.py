@@ -17,6 +17,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.indexer = indexer
         self.setWindowTitle("Semantic File Searcher")
+        
+        # Load Icon
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png")
+        if os.path.exists(icon_path):
+             self.setWindowIcon(QIcon(icon_path))
+             
         self.resize(1200, 850)
         
         # Load component style
