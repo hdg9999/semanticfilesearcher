@@ -221,3 +221,30 @@ class FileResultWidget(QFrame):
             menu.exec(self.more_btn.mapToGlobal(self.more_btn.rect().bottomLeft()))
         else:
             menu.exec(self.cursor().pos())
+
+    def set_unregistered_status(self):
+        """Displays 'Unregistered' label instead of tags"""
+        label = QLabel("미등록 파일")
+        label.setStyleSheet("""
+            background-color: #555;
+            color: #ccc;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: bold;
+        """)
+        label.setFixedSize(80, 24)
+        label.setAlignment(Qt.AlignCenter)
+        
+        if self.view_mode == "list":
+             layout = self.layout()
+             # We want to put it where tags go.
+             # If tags are empty, the 3rd column (tag_column) might not exist.
+             # So layout has Icon Label, Info Column.
+             
+             layout.addWidget(label)
+             layout.setAlignment(label, Qt.AlignRight | Qt.AlignVCenter)
+        else:
+             # Icon mode: Add below name
+             self.layout().addWidget(label, alignment=Qt.AlignCenter)
+

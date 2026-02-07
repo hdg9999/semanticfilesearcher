@@ -24,6 +24,9 @@ class FileScanner:
 
     def process_file(self, file_path):
         """단일 파일을 처리하여 DB에 저장하고 임베딩을 생성합니다."""
+        # Normalize path to use OS separator (e.g. Backslash on Windows)
+        file_path = os.path.normpath(file_path)
+        
         ext = os.path.splitext(file_path)[1].lower()
         mtime = os.path.getmtime(file_path)
         last_modified = datetime.fromtimestamp(mtime)

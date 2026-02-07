@@ -194,3 +194,25 @@
 ### 아이콘 적용 이슈 해결
 - `ui/main_window.py`: 아이콘 경로를 절대 경로(실행 파일 기준)로 탐색하도록 수정하여 로딩 안정성 확보.
 - `main.py`: Windows 작업 표시줄에 아이콘이 정상적으로 표시되도록 `AppUserModelID` 설정 코드 추가.
+
+## [2026-02-08] 파일 탐색 기능 추가 (File Explorer Feature)
+- **사이드바(Sidebar) 구현**:
+    - `ui/components/sidebar.py`: `QFileSystemModel` 기반의 폴더 트리 뷰 구현.
+    - `ui/main_window.py`: 좌측 사이드바와 우측 콘텐츠 영역을 `QSplitter`로 분할하여 통합.
+- **경로 표시줄(Path Bar) 추가**:
+    - `ui/components/path_bar.py`: Breadcrumb(버튼) 방식의 경로 탐색 및 직접 입력(Edit) 모드 지원.
+    - 상단 경로 바를 통해 상위 폴더 이동 및 새로고침 기능 구현.
+- **파일 목록 및 등록 상태 표시**:
+    - `ui/main_window.py`: 폴더 선택 시 `os.scandir`를 사용하여 파일 목록을 로드하고 DB 인덱싱 여부 확인.
+    - `ui/main_window.py`: 폴더 선택 시 `os.scandir`를 사용하여 파일 목록을 로드하고 DB 인덱싱 여부 확인.
+    - `ui/components/result_item.py`: DB에 등록되지 않은 파일의 경우 태그 위치에 **"미등록 파일"** 라벨 표시.
+- **버그 수정**:
+    - `ui/components/path_bar.py`: `eventFilter`에서 `QEvent` 속성 접근 오류(`AttributeError`) 수정.
+    - `ui/main_window.py`: 파일 클릭 시 발생할 수 있는 잠재적 오류에 대한 예외 처리 및 안전한 리소스 접근 로직 추가.
+    - `ui/main_window.py`: 폴더 이동(`load_directory`) 시 기존 선택된 항목(`selected_item`) 참조를 초기화하지 않아 발생하는 `RuntimeError` (deleted object access) 수정.
+    - `ui/resources/icons/refresh_white.svg`: 누락된 새로고침 아이콘 파일 생성 및 적용.
+    - `ui/main_window.py`: DB와 OS 간의 경로 구분자(Slash vs Backslash) 및 대소문자 불일치로 인해 발생하는 '미등록 파일' 표시 오류를 해결하기 위해 `load_directory`의 파일 조회 로직을 `LIKE` 쿼리 및 정규화(`normcase`) 기반으로 전면 수정.
+    - `core/indexing/scanner.py`, `core/indexing/monitor.py`: 파일 인덱싱 및 변경 감지 시 OS 기본 경로 구분자(Windows: `\`)로 경로를 정규화하여 DB에 저장하도록 수정.
+    - [마이그레이션]: 기존 DB에 저장된 비표준 경로(Slash 혼용 등)를 OS 표준 경로 포맷으로 일괄 변환하는 마이그레이션 작업 수행 완료 (20개 경로 수정됨).
+    - `ui/components/path_bar.py`: 라이트 모드에서 새로고침 아이콘이 보이지 않는 문제 해결을 위해 테마별 아이콘 변경(`update_icons`) 기능 추가 및 하드코딩된 스타일 제거(QSS로 이관).
+    - `ui/resources/icons/refresh.svg`: 라이트 모드용(어두운 색) 새로고침 아이콘 추가.

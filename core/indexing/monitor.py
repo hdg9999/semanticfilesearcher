@@ -9,15 +9,15 @@ class IndexingHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if not event.is_directory:
-            if self.callback: self.callback(event.src_path, "modified")
+            if self.callback: self.callback(os.path.normpath(event.src_path), "modified")
 
     def on_created(self, event):
         if not event.is_directory:
-            if self.callback: self.callback(event.src_path, "created")
+            if self.callback: self.callback(os.path.normpath(event.src_path), "created")
 
     def on_deleted(self, event):
         if not event.is_directory:
-            if self.callback: self.callback(event.src_path, "deleted")
+            if self.callback: self.callback(os.path.normpath(event.src_path), "deleted")
 
 class FileMonitor:
     def __init__(self):

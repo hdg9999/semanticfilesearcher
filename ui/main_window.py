@@ -10,6 +10,10 @@ from ui.components.result_item import FileResultWidget
 from ui.components.detail_pane import DetailPane
 from ui.components.badged_button import BadgedButton
 from ui.components.tag_input import TagInputWidget
+from ui.components.tag_input import TagInputWidget
+from ui.components.tag_input import TagInputWidget
+from ui.components.sidebar import FileSidebar
+from ui.components.path_bar import PathBar
 import os
 
 class MainWindow(QMainWindow):
@@ -121,6 +125,29 @@ class MainWindow(QMainWindow):
         
         main_layout.addWidget(tag_container)
 
+
+
+        # 메인 좌우 분할 (사이드바 | 콘텐츠)
+        self.main_h_splitter = QSplitter(Qt.Horizontal)
+        self.main_h_splitter.setHandleWidth(1) # Thin divider
+        
+        # 1. 좌측 사이드바
+        self.sidebar = FileSidebar()
+        self.sidebar.folder_selected.connect(self.on_folder_selected)
+        self.main_h_splitter.addWidget(self.sidebar)
+        
+        # 2. 우측 콘텐츠 영역
+        right_content_widget = QWidget()
+        right_content_layout = QVBoxLayout(right_content_widget)
+        right_content_layout.setContentsMargins(0, 0, 0, 0)
+        right_content_layout.setSpacing(0)
+        
+        # 2.5. 경로 표시줄 (Path Bar)
+        self.path_bar = PathBar()
+        self.path_bar.path_changed.connect(self.load_directory)
+        self.path_bar.refresh_clicked.connect(lambda: self.load_directory(self.path_bar.current_path))
+        right_content_layout.addWidget(self.path_bar)
+        
         # 3행: 뷰 모드 컨트롤 바 (검색 모드 아래, 결과창 위)
         control_container = QWidget()
         control_container.setObjectName("controlContainer")
@@ -158,7 +185,9 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(self.toggle_detail_btn) # Add toggle button
         control_layout.addStretch()
         
-        main_layout.addWidget(control_container)
+
+        
+        right_content_layout.addWidget(control_container) # Add to right content instead of main_layout
 
         # 중간 영역 (Splitter 사용)
         self.content_splitter = QSplitter(Qt.Horizontal)
@@ -187,7 +216,13 @@ class MainWindow(QMainWindow):
         self.content_splitter.setStretchFactor(1, 1)
         self.content_splitter.setSizes([900, 300]) # Explicitly set initial sizes
         
-        main_layout.addWidget(self.content_splitter, 1) # Add stretch factor to expand
+        right_content_layout.addWidget(self.content_splitter, 1) # Add stretch factor to expand
+        
+        self.main_h_splitter.addWidget(right_content_widget)
+        self.main_h_splitter.setStretchFactor(1, 1) # Give right side more space
+        self.main_h_splitter.setSizes([250, 950]) # Sidebar width
+        
+        main_layout.addWidget(self.main_h_splitter, 1)
 
 
         # 하단 상태 바
@@ -297,20 +332,35 @@ class MainWindow(QMainWindow):
         self.detail_pane.setVisible(checked)
 
     def on_file_clicked(self, path):
-        # Handle visual selection
-        sender = self.sender()
-        if isinstance(sender, FileResultWidget):
-             if self.selected_item:
-                 self.selected_item.set_selected(False)
-             
-             self.selected_item = sender
-             self.selected_item.set_selected(True)
-
-             # Update Detail Pane
-             tags = self.indexer.db.get_tags_for_file(path)
-             # Get icon from the widget
-             icon = sender.icon_label.pixmap() if hasattr(sender, 'icon_label') and hasattr(sender.icon_label, 'pixmap') else None
-             self.detail_pane.update_info(path, tags, icon)
+        try:
+            # Handle visual selection
+            sender = self.sender()
+            # print(f"File clicked: {path}, sender: {sender}")
+            
+            if isinstance(sender, FileResultWidget):
+                 if self.selected_item and self.selected_item != sender:
+                     self.selected_item.set_selected(False)
+                 
+                 self.selected_item = sender
+                 self.selected_item.set_selected(True)
+    
+                 # Update Detail Pane
+                 try:
+                     tags = self.indexer.db.get_tags_for_file(path)
+                 except Exception as e:
+                     print(f"Error fetching tags: {e}")
+                     tags = []
+                     
+                 # Get icon from the widget safe access
+                 icon = None
+                 if hasattr(sender, 'icon_label') and sender.icon_label:
+                     icon = sender.icon_label.pixmap()
+                 
+                 self.detail_pane.update_info(path, tags, icon)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"Error in on_file_clicked: {e}")
 
     def open_file_tag_dialog(self, path):
         from ui.tag_dialog import TagSelectionDialog
@@ -432,4 +482,110 @@ class MainWindow(QMainWindow):
         
         # Update Sidebar Toggle Button
         self.toggle_detail_btn.setIcon(QIcon(f"ui/resources/icons/sidebar_toggle{suffix}.svg"))
+
+        # Update PathBar Icons
+        if hasattr(self, 'path_bar'):
+            self.path_bar.update_icons(suffix)
+
+    def on_folder_selected(self, path):
+        self.load_directory(path)
+
+    def load_directory(self, path):
+        if not os.path.exists(path) or not os.path.isdir(path):
+            return
+        
+        # Normalize path casing/symlinks for consistency with DB
+        path = os.path.realpath(path)
+
+        self.status_label.setText(f"폴더 로드 중: {path}")
+        self.path_bar.set_path(path)
+        # Sync Sidebar (block signals to avoid recursion if needed, but sidebar emits on click, not set current)
+        self.sidebar.select_path(path)
+        
+        # Reset selection to avoid holding reference to deleted widgets
+        self.selected_item = None
+        
+        # Clear current results
+        # Re-use result container setup from perform_search
+        from ui.components.flow_layout import FlowLayout
+        new_container = QWidget()
+        new_container.setObjectName("resultContainer")
+        
+        if self.view_mode == "list":
+            self.result_layout = QVBoxLayout(new_container)
+            self.result_layout.setAlignment(Qt.AlignTop)
+        else:
+            self.result_layout = FlowLayout(new_container)
+            
+        self.scroll_area.setWidget(new_container)
+        self.result_container = new_container
+        
+        # Fetch files
+        try:
+            # 1. Scanner files (Disk)
+            with os.scandir(path) as entries:
+                disk_files = [e for e in entries if e.is_file()]
+                
+            # 2. Build tag/status map from DB
+            # We use LIKE queries to cover both forward and backward slash variants in DB
+            db_map = {} # normcase_path -> tags list
+            
+            # Prepare prefixes
+            # Ensure trailing slash to match only children/descendants (though we filter later)
+            path_win = path.rstrip(os.sep) + os.sep
+            path_unix = path.replace('\\', '/').rstrip('/') + '/'
+            
+            # Query
+            query = """
+                SELECT f.file_path, t.name, t.color 
+                FROM files f
+                LEFT JOIN file_tags ft ON f.id = ft.file_id
+                LEFT JOIN tags t ON ft.tag_id = t.id
+                WHERE f.file_path LIKE ? OR f.file_path LIKE ?
+            """
+            
+            with self.indexer.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (f"{path_win}%", f"{path_unix}%"))
+                rows = cursor.fetchall()
+                
+                # Process DB results
+                for f_path, t_name, t_color in rows:
+                    # Normalize DB path to compare with Disk path
+                    # normcase handles case-insensitivity on Windows and slash normalization
+                    norm_path = os.path.normcase(os.path.normpath(f_path))
+                    
+                    if norm_path not in db_map:
+                        db_map[norm_path] = {'tags': [], 'registered': True}
+                    
+                    if t_name: # If tag exists
+                        db_map[norm_path]['tags'].append((t_name, t_color))
+
+            # 3. Create Widgets
+            for entry in disk_files:
+                file_path = entry.path
+                norm_path = os.path.normcase(os.path.normpath(file_path))
+                
+                info = db_map.get(norm_path, {'tags': [], 'registered': False})
+                is_registered = info.get('registered', False)
+                tags = info.get('tags', [])
+                
+                # Create Widget
+                widget = FileResultWidget(file_path, view_mode=self.view_mode, tags=tags)
+                
+                if not is_registered:
+                     widget.set_unregistered_status()
+
+                widget.clicked.connect(self.on_file_clicked)
+                widget.double_clicked.connect(self.on_file_double_clicked)
+                widget.manage_tags_requested.connect(self.open_file_tag_dialog)
+                widget.tag_clicked.connect(self.add_tag_to_search)
+                self.result_layout.addWidget(widget)
+
+            self.status_label.setText(f"폴더 로드 완료: {len(disk_files)}개 파일")
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "오류", f"폴더를 열 수 없습니다: {e}")
 

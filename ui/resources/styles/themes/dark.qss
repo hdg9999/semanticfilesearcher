@@ -266,3 +266,32 @@ QLabel#fileNameLabelIconMode {
     font-size: 12px;
     color: #ffffff;
 }
+
+/* PathBar */
+#pathBar {
+    background-color: #252526;
+    border-bottom: 1px solid #3e3e42;
+}
+
+QPushButton#breadcrumbBtn {
+    border: none;
+    color: #cccccc;
+    padding: 4px 8px;
+    background: transparent;
+    text-align: left;
+}
+
+QPushButton#breadcrumbBtn:hover {
+    background-color: #3e3e42;
+    color: #ffffff;
+}
+
+QPushButton#refreshBtn {
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+}
+
+QPushButton#refreshBtn:hover {
+    background-color: #3e3e42;
+}
