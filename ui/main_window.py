@@ -44,6 +44,8 @@ class MainWindow(QMainWindow):
         self.worker = None
         self.view_mode = "list"
         self.selected_item = None # Currently selected FileResultWidget
+        self.current_context = "search"
+        self.current_directory = None
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -278,7 +280,10 @@ class MainWindow(QMainWindow):
         self.view_mode = mode
         self.view_list_btn.setChecked(mode == "list")
         self.view_icon_btn.setChecked(mode == "icon")
-        self.perform_search() # 현재 검색어로 다시 그리기
+        if self.current_context == 'directory' and self.current_directory:
+            self.load_directory(self.current_directory)
+        else:
+            self.perform_search() # 현재 검색어로 다시 그리기
 
     def perform_search(self):
         query = self.search_input.text()
@@ -293,6 +298,14 @@ class MainWindow(QMainWindow):
         tag_logic = self.tag_logic.currentText()
         
         results = self.indexer.search(query, mode=mode, extensions=exts, tags=tags, tag_logic=tag_logic)
+        
+        # Update Context and PathBar
+        self.current_context = 'search'
+        self.current_directory = None
+        if hasattr(self, 'path_bar'):
+            # os.path.normpath might mess up the display string if it looks like a path, but for simple text it's fine.
+            # We bypass set_path's normpath if needed, but let's try using set_path for consistency in breadcrumbs.
+            self.path_bar.set_path(f"'{query}' 검색 결과")
         
         # 결과 렌더링
         # 뷰 모드에 따라 컨테이너 및 레이아웃 설정
@@ -498,6 +511,10 @@ class MainWindow(QMainWindow):
         path = os.path.realpath(path)
 
         self.status_label.setText(f"폴더 로드 중: {path}")
+        
+        self.current_context = 'directory'
+        self.current_directory = path
+        
         self.path_bar.set_path(path)
         # Sync Sidebar (block signals to avoid recursion if needed, but sidebar emits on click, not set current)
         self.sidebar.select_path(path)
