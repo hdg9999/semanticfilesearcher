@@ -6,6 +6,7 @@ class ConfigManager:
         self.config_path = config_path
         self.config = {
             "indexed_folders": [],
+            "monitoring_exceptions": [],
             "llm": {
                 "provider": "Ollama",
                 "model": "llama3",
@@ -43,6 +44,21 @@ class ConfigManager:
     def remove_folder(self, path):
         if path in self.config["indexed_folders"]:
             self.config["indexed_folders"].remove(path)
+            self.save()
+
+    def get_monitoring_exceptions(self):
+        return self.config.get("monitoring_exceptions", [])
+
+    def add_exception(self, path):
+        if path not in self.config.get("monitoring_exceptions", []):
+            if "monitoring_exceptions" not in self.config:
+                self.config["monitoring_exceptions"] = []
+            self.config["monitoring_exceptions"].append(path)
+            self.save()
+
+    def remove_exception(self, path):
+        if path in self.config.get("monitoring_exceptions", []):
+            self.config["monitoring_exceptions"].remove(path)
             self.save()
 
     def get_llm_config(self):

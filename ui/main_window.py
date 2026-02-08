@@ -136,6 +136,8 @@ class MainWindow(QMainWindow):
         # 1. 좌측 사이드바
         self.sidebar = FileSidebar()
         self.sidebar.folder_selected.connect(self.on_folder_selected)
+        self.sidebar.monitoring_action_requested.connect(self.handle_monitoring_action)
+        self.sidebar.set_indexer(self.indexer)
         self.main_h_splitter.addWidget(self.sidebar)
         
         # 2. 우측 콘텐츠 영역
@@ -331,6 +333,7 @@ class MainWindow(QMainWindow):
             widget.double_clicked.connect(self.on_file_double_clicked)
             widget.manage_tags_requested.connect(self.open_file_tag_dialog)
             widget.tag_clicked.connect(self.add_tag_to_search)
+            widget.monitoring_action_requested.connect(self.handle_monitoring_action)
             self.result_layout.addWidget(widget)
             
         self.status_label.setText(f"검색 완료: {len(results)}개의 결과")
@@ -597,6 +600,7 @@ class MainWindow(QMainWindow):
                 widget.double_clicked.connect(self.on_file_double_clicked)
                 widget.manage_tags_requested.connect(self.open_file_tag_dialog)
                 widget.tag_clicked.connect(self.add_tag_to_search)
+                widget.monitoring_action_requested.connect(self.handle_monitoring_action)
                 self.result_layout.addWidget(widget)
 
             self.status_label.setText(f"폴더 로드 완료: {len(disk_files)}개 파일")
@@ -605,4 +609,28 @@ class MainWindow(QMainWindow):
             import traceback
             traceback.print_exc()
             QMessageBox.critical(self, "오류", f"폴더를 열 수 없습니다: {e}")
+
+    def handle_monitoring_action(self, path, action):
+        if action == "add":
+             # Confirm? Maybe not needed for adding, but good for feedback.
+             self.indexer.add_to_monitoring(path)
+             self.status_label.setText(f"모니터링 추가됨: {path}")
+             # QMessageBox.information(self, "모니터링 추가", f"'{path}' 경로가 모니터링 대상에 추가되었습니다.")
+             
+        elif action == "remove":
+            reply = QMessageBox.question(self, "모니터링 해제", 
+                                       f"정말로 다음 경로를 모니터링에서 해제하시겠습니까?\n\n{path}\n\n해당 경로의 인덱스 데이터가 삭제되거나 업데이트가 중지됩니다.",
+                                       QMessageBox.Yes | QMessageBox.No)
+            if reply != QMessageBox.Yes:
+                return
+                
+            self.indexer.remove_from_monitoring(path)
+            self.status_label.setText(f"모니터링 해제됨: {path}")
+            # QMessageBox.information(self, "모니터링 해제", f"'{path}' 경로가 모니터링에서 해제되었습니다.")
+
+        #Refresh UI
+        if self.current_context == 'directory' and self.current_directory:
+            self.load_directory(self.current_directory)
+        else:
+            self.perform_search()
 

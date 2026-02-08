@@ -9,6 +9,7 @@ class FileResultWidget(QFrame):
     double_clicked = Signal(str)
     tag_clicked = Signal(str) # 태그 클릭 시 시그널
     manage_tags_requested = Signal(str)
+    monitoring_action_requested = Signal(str, str) # path, action ("add" or "remove")
 
     def __init__(self, file_path, view_mode="list", tags=None, parent=None):
         super().__init__(parent)
@@ -16,6 +17,7 @@ class FileResultWidget(QFrame):
         self.view_mode = view_mode
         self.tags = tags or []
         self.file_name = os.path.basename(file_path)
+        self._is_monitored = True # Default to monitored
         
         self.setMouseTracking(True)
         self._setup_ui()
@@ -206,7 +208,14 @@ class FileResultWidget(QFrame):
 
     def show_context_menu(self):
         menu = QMenu(self)
-        info_act = QAction("파일 정보 보기", self)
+        
+        if self._is_monitored:
+            info_act = QAction("모니터링 해제", self)
+            info_act.triggered.connect(lambda: self.monitoring_action_requested.emit(self.file_path, "remove"))
+        else:
+            info_act = QAction("모니터링에 추가", self)
+            info_act.triggered.connect(lambda: self.monitoring_action_requested.emit(self.file_path, "add"))
+            
         tag_act = QAction("태그 관리", self)
         tag_act.triggered.connect(lambda: self.manage_tags_requested.emit(self.file_path))
         del_act = QAction("파일 삭제", self)
@@ -223,6 +232,7 @@ class FileResultWidget(QFrame):
             menu.exec(self.cursor().pos())
 
     def set_unregistered_status(self):
+        self._is_monitored = False
         """Displays 'Unregistered' label instead of tags"""
         label = QLabel("미등록 파일")
         label.setStyleSheet("""

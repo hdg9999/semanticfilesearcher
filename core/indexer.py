@@ -127,6 +127,10 @@ class SemanticIndexer:
             # 파일 존재 여부 확인 (삭제된 파일이 벡터DB에 남아있을 수 있음)
             if not os.path.exists(path):
                 continue
+            
+            # 모니터링 대상 여부 및 예외 경로 필터링 (1-3 및 버그 해결)
+            if not self.is_monitored(path):
+                continue
 
             # 태그 필터 적용
             if allowed_files_by_tags is not None:
@@ -156,8 +160,86 @@ class SemanticIndexer:
             
         return filtered_results
 
+    def is_monitored(self, path):
+        path = os.path.normpath(path)
+        folders = [os.path.normpath(f) for f in self.config.get_folders()]
+        exceptions = [os.path.normpath(e) for e in self.config.get_monitoring_exceptions()]
+
+        # 1. Check if path is explicitly excluded
+        for exc in exceptions:
+            if path == exc or path.startswith(exc + os.sep):
+                return False
+
+        # 2. Check if path is included (or is a monitored folder itself)
+        for folder in folders:
+            if path == folder or path.startswith(folder + os.sep):
+                return True
+        return False
+
+    def add_to_monitoring(self, path):
+        path = os.path.normpath(path)
+        
+        # 1. Check if it was an exception
+        # Normalize exceptions for comparison
+        exceptions = [os.path.normpath(e) for e in self.config.get_monitoring_exceptions()]
+        if path in exceptions:
+            # We need to remove the original string from config, which might differ.
+            # So we iterate and find the match.
+            original_exceptions = self.config.get_monitoring_exceptions()
+            for exc in original_exceptions:
+                if os.path.normpath(exc) == path:
+                    self.config.remove_exception(exc)
+                    print(f"Removed from monitoring exceptions: {exc}")
+                    return
+
+        # 2. Add as new root if not covered
+        if not self.is_monitored(path):
+            self.index_folder(path)
+
+    def remove_from_monitoring(self, path):
+        path = os.path.normpath(path)
+        # Get raw folders but check against normalized
+        start_folders = self.config.get_folders()
+        
+        # Find if there is an exact match (normalized)
+        target_folder = None
+        for f in start_folders:
+            if os.path.normpath(f) == path:
+                target_folder = f
+                break
+        
+        # Case 1: Exact Match in Watch List
+        if target_folder:
+            self.remove_folder(target_folder)
+            # Delete related data from DB
+            # RDB
+            # RDB
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                # 1. Exact match
+                cursor.execute("DELETE FROM files WHERE file_path = ?", (path,))
+                # 2. Subpath match (ensure separator)
+                cursor.execute("DELETE FROM files WHERE file_path LIKE ?", (f"{path}{os.sep}%",))
+                conn.commit()
+            # Vector DB (FAISS doesn't support easy delete by ID without mapping, 
+            # Re-indexing might be needed or ignore. 
+            # For now, we accept that VectorDB might have stale data until full re-index, 
+            # or we filter search results by DB existence (which we already do))
+            print(f"Removed {path} and cleaned up DB.")
+            return
+
+        # Case 2: Subpath of Monitored Folder
+        # Check if it is really monitored first
+        if self.is_monitored(path):
+            self.config.add_exception(path)
+            print(f"Added monitoring exception: {path}")
+            # Do NOT delete from DB per requirements
+
     def _on_change(self, file_path, action):
-        # Watchdog 이벤트 -> 우선순위 큐로 전달
+        # Check exceptions first
+        if not self.is_monitored(file_path):
+            return
+
         # Watchdog 이벤트 -> 우선순위 큐로 전달
         if action in ["created", "modified"]:
             # 단순 읽기 등으로 인한 중복 감지 방지

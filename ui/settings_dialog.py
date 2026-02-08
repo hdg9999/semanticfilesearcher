@@ -68,22 +68,36 @@ class SettingsDialog(QDialog):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        self.folder_list = QListWidget()
-        # 실제 등록된 폴더 목록 불러오기 (예시)
-        for path in self.indexer.monitor.watch_list.keys():
-            self.folder_list.addItem(path)
-            
+        # 1. Monitored Folders
         layout.addWidget(QLabel("모니터링 중인 폴더:"))
+        self.folder_list = QListWidget()
+        for path in self.indexer.config.get_folders(): # Use config directly
+            self.folder_list.addItem(path)
         layout.addWidget(self.folder_list)
         
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("추가")
+        add_btn = QPushButton("폴더 추가")
         add_btn.clicked.connect(self._add_folder)
-        del_btn = QPushButton("삭제")
+        del_btn = QPushButton("폴더 삭제")
         del_btn.clicked.connect(self._remove_folder)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
         layout.addLayout(btn_layout)
+
+        layout.addSpacing(10)
+
+        # 2. Monitoring Exceptions
+        layout.addWidget(QLabel("모니터링 예외 (제외된 하위 폴더):"))
+        self.exception_list = QListWidget()
+        for path in self.indexer.config.get_monitoring_exceptions():
+            self.exception_list.addItem(path)
+        layout.addWidget(self.exception_list)
+        
+        exc_btn_layout = QHBoxLayout()
+        restore_btn = QPushButton("예외 해제 (다시 모니터링)")
+        restore_btn.clicked.connect(self._remove_exception)
+        exc_btn_layout.addWidget(restore_btn)
+        layout.addLayout(exc_btn_layout)
         
         return widget
 
@@ -201,6 +215,9 @@ class SettingsDialog(QDialog):
     def _add_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "폴더 선택")
         if folder:
+            import os
+            folder = os.path.normpath(folder)
+            
             # 중복 체크
             if folder in self.indexer.config.get_folders():
                 QMessageBox.warning(self, "경고", "이미 등록된 폴더입니다.")
@@ -217,8 +234,23 @@ class SettingsDialog(QDialog):
         
         for item in items:
             folder = item.text()
-            self.indexer.remove_folder(folder)
+            # Use remove_from_monitoring to ensure DB cleanup (Bug fix)
+            self.indexer.remove_from_monitoring(folder)
             self.folder_list.takeItem(self.folder_list.row(item))
+
+    def _remove_exception(self):
+        items = self.exception_list.selectedItems()
+        if not items:
+            QMessageBox.warning(self, "경고", "해제할 예외 항목을 선택해주세요.")
+            return
+            
+        for item in items:
+            path = item.text()
+            # Calling add_to_monitoring on an exception removes it from exceptions
+            self.indexer.add_to_monitoring(path) 
+            self.exception_list.takeItem(self.exception_list.row(item))
+        
+        QMessageBox.information(self, "알림", "선택한 항목이 예외 목록에서 제거되고 모니터링이 재개됩니다.")
 
     def _add_tag_ui(self):
         from PySide6.QtWidgets import QInputDialog

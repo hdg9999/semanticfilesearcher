@@ -93,12 +93,15 @@ class FileScanner:
             elif self._is_supported(ext, 'image'):
                 embedding = self.embedding_adapter.encode_image(file_path)
     
-            # 2. DB 업데이트
+            # 2. DB 업데이트: 항상 수행 (메타데이터/파일명 검색 등)
+            file_id = self.db_manager.upsert_file(file_path, last_modified)
+            
             if embedding is not None:
-                file_id = self.db_manager.upsert_file(file_path, last_modified)
                 if self.vector_db_manager:
                     self.vector_db_manager.add_vectors(embedding, [file_path])
-                print(f"Indexed: {file_path}")
+                print(f"Indexed (with embedding): {file_path}")
+            else:
+                print(f"Indexed (metadata only): {file_path}")
 
     def extract_text(self, file_path):
         ext = os.path.splitext(file_path)[1].lower()
