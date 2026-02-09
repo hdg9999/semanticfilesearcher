@@ -251,3 +251,9 @@
     - 폴더 모니터링 해제(`remove_from_monitoring`) 시에도 연관된 모든 벡터 데이터를 정리하도록 개선.
 - **검증**: `verify_vector_db.py` 스크립트를 통해 파일 추가, 삭제, 수정, 재등록 시나리오에서 데이터 무결성 및 중복 방지 동작 검증 완료.
 - **[Hotfix] 검색 오류 수정**: 벡터 DB 구조 변경 후 `search` 메서드에서 파일 경로를 찾지 못해 발생하던 오류(`KeyError`)를 해결하기 위해, `file_vectors` 테이블을 조회하여 `vector_id`를 `file_path`로 변환하는 로직 추가.
+
+## [2026-02-10] CUDA 가속 환경 설정
+- **.venv-gpu 생성**: CUDA 13.0 지원 가상환경 추가 (Python 3.13).
+- **Torch GPU**: `torch 2.10.0+cu130` 설치 완료 (RTX 5090 감지).
+- **Faiss**: Windows/Python 3.13 환경에서 `faiss-gpu` 패키지(PyPI) 미지원으로 인해 `faiss-cpu_1.13.2`로 대체 설치. (기능 동작 가능, GPU 가속 불가)
+- **pyproject.toml**: `cpu`, `gpu` optional dependencies 분리.
