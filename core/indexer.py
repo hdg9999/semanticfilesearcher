@@ -114,6 +114,16 @@ class SemanticIndexer:
         query_vec = self.embedding.encode_text(query)
         vector_results = self.vector_db.search(query_vec, top_k=50)
         
+        # 3-1. Vector ID -> File Path 변환
+        if vector_results:
+            vector_ids = [res['vector_id'] for res in vector_results]
+            # Batch query to get file paths
+            id_to_path_map = self.db.get_file_paths_by_vector_ids(vector_ids)
+            
+            # Map paths back to results
+            for res in vector_results:
+                res['file_path'] = id_to_path_map.get(res['vector_id'])
+        
         # 4. 후속 필터링 (확장자 등)
         filtered_results = []
         
@@ -123,7 +133,10 @@ class SemanticIndexer:
              allowed_files_by_tags = set(self.db.search_by_tags(tags, condition=tag_logic))
 
         for res in vector_results:
-            path = res['file_path']
+            path = res.get('file_path') # vector_id에 해당하는 파일이 없을 수 있음 (DB 비동기 삭제 등)
+            if not path:
+                continue
+                
             # 파일 존재 여부 확인 (삭제된 파일이 벡터DB에 남아있을 수 있음)
             if not os.path.exists(path):
                 continue
@@ -151,14 +164,22 @@ class SemanticIndexer:
             filtered_results.append(res)
             
         # 5. 검색 결과에 태그 정보 포함 (배치 조회)
-        if filtered_results:
-            file_paths = [res['file_path'] for res in filtered_results]
+        unique_results = []
+        seen_paths = set()
+        
+        for res in filtered_results:
+            if res['file_path'] not in seen_paths:
+                seen_paths.add(res['file_path'])
+                unique_results.append(res)
+        
+        if unique_results:
+            file_paths = [res['file_path'] for res in unique_results]
             tags_map = self.db.get_tags_for_files(file_paths)
             
-            for res in filtered_results:
+            for res in unique_results:
                 res['tags'] = tags_map.get(res['file_path'], [])
             
-        return filtered_results
+        return unique_results
 
     def is_monitored(self, path):
         path = os.path.normpath(path)
@@ -216,15 +237,33 @@ class SemanticIndexer:
             # RDB
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
+                
+                # Get IDs to delete (Exact match + Subpath match)
                 # 1. Exact match
+                cursor.execute("SELECT id FROM files WHERE file_path = ?", (path,))
+                ids = [row[0] for row in cursor.fetchall()]
+                
+                # 2. Subpath match
+                cursor.execute("SELECT id FROM files WHERE file_path LIKE ?", (f"{path}{os.sep}%",))
+                ids.extend([row[0] for row in cursor.fetchall()])
+                
+                # Delete vectors for these files
+                for fid in ids:
+                    v_ids = self.db.get_vector_ids(fid)
+                    if v_ids:
+                        self.vector_db.delete_vectors_by_ids(v_ids)
+                        self.db.delete_vector_ids(v_ids)
+
+                # Delete files (Cascading delete handles file_vectors and file_tags if configured, 
+                # but we prefer explicit handling or relying on DB cascade)
+                # Since we defined ON DELETE CASCADE in SQLite, deleting files should remove file_vectors rows automatically.
+                # However, we needed to delete from Vector DB FIRST (which we just did above).
+                
+                # Now delete files
                 cursor.execute("DELETE FROM files WHERE file_path = ?", (path,))
-                # 2. Subpath match (ensure separator)
                 cursor.execute("DELETE FROM files WHERE file_path LIKE ?", (f"{path}{os.sep}%",))
                 conn.commit()
-            # Vector DB (FAISS doesn't support easy delete by ID without mapping, 
-            # Re-indexing might be needed or ignore. 
-            # For now, we accept that VectorDB might have stale data until full re-index, 
-            # or we filter search results by DB existence (which we already do))
+
             print(f"Removed {path} and cleaned up DB.")
             return
 
@@ -286,8 +325,16 @@ class SemanticIndexer:
 
                     elif task.status == "deleted":
                         print(f"[Worker] Processing delete: {task.path}")
+                        # 1. 벡터 DB에서 삭제 (ID 조회 -> 삭제)
+                        file_id = self.db.get_file_id(task.path)
+                        if file_id:
+                            vector_ids = self.db.get_vector_ids(file_id)
+                            if vector_ids:
+                                self.vector_db.delete_vectors_by_ids(vector_ids)
+                                self.db.delete_vector_ids(vector_ids)
+                        
+                        # 2. 메타데이터 DB 삭제
                         self.db.delete_file(task.path)
-                        # 벡터 DB 삭제 로직은 별도 구현 필요할 수 있음
                 except Exception as e:
                     print(f"[Worker] Error processing {task.path}: {e}")
                 finally:

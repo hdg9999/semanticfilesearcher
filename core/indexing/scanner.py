@@ -96,10 +96,21 @@ class FileScanner:
             # 2. DB 업데이트: 항상 수행 (메타데이터/파일명 검색 등)
             file_id = self.db_manager.upsert_file(file_path, last_modified)
             
-            if embedding is not None:
-                if self.vector_db_manager:
-                    self.vector_db_manager.add_vectors(embedding, [file_path])
-                print(f"Indexed (with embedding): {file_path}")
+            # 3. Vector DB 업데이트
+            if embedding is not None and self.vector_db_manager:
+                # 3-1. 기존 벡터 삭제 (파일 수정 시)
+                old_vector_ids = self.db_manager.get_vector_ids(file_id)
+                if old_vector_ids:
+                    self.vector_db_manager.delete_vectors_by_ids(old_vector_ids)
+                    self.db_manager.delete_vector_ids(old_vector_ids)
+
+                # 3-2. 새 벡터 ID 발급
+                new_vector_id = self.db_manager.allocate_vector_id(file_id)
+                
+                # 3-3. Vector DB에 추가
+                # add_vectors expects list of vectors and list of IDs
+                self.vector_db_manager.add_vectors(embedding, [new_vector_id])
+                print(f"Indexed (with embedding): {file_path} (ID: {new_vector_id})")
             else:
                 print(f"Indexed (metadata only): {file_path}")
 

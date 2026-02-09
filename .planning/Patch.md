@@ -239,3 +239,15 @@
     - **인덱싱 누락 방지**: 텍스트 추출 실패(예: 스캔된 PDF) 시 파일 자체가 DB에 저장되지 않던 문제 해결. 메타데이터(파일명) 인덱싱을 강제하여 검색 가능성 보장.
 - **UI/UX**: 모니터링 해제 시 경고 팝업을 통해 사용자 실수 방지. 상태 바(Status Bar)에 작업 결과 실시간 피드백 제공.
 - **안정성**: `test_monitoring.py`, `test_bug_repro.py`, `test_db_cleanup.py`를 통해 모니터링 추가/해제, 예외 처리, 검색 필터링 로직 검증 완료.
+
+## 2026-02-09
+### 벡터 DB 구조 개선 및 중복 검색 해결
+- **중복 검색 해결**: `SemanticIndexer.search`에 파일 경로 기반 중복 제거 로직을 추가하여 동일 파일이 여러 번 노출되는 문제 해결.
+- **벡터 DB 고도화**:
+    - `faiss.IndexFlatIP` (Cosine Similarity) 및 `IndexIDMap` 도입으로 벡터 ID 관리 및 유사도 검색 정확도 향상.
+    - `file_vectors` 테이블(SQLite)을 신설하여 파일과 벡터 ID 간의 매핑 관계 관리.
+- **삭제 로직 완성**:
+    - 파일 수정/삭제 시 RDB에서 벡터 ID를 조회하여 Vector DB(`vector.faiss`)에서 해당 벡터를 물리적으로 삭제하는 로직 구현.
+    - 폴더 모니터링 해제(`remove_from_monitoring`) 시에도 연관된 모든 벡터 데이터를 정리하도록 개선.
+- **검증**: `verify_vector_db.py` 스크립트를 통해 파일 추가, 삭제, 수정, 재등록 시나리오에서 데이터 무결성 및 중복 방지 동작 검증 완료.
+- **[Hotfix] 검색 오류 수정**: 벡터 DB 구조 변경 후 `search` 메서드에서 파일 경로를 찾지 못해 발생하던 오류(`KeyError`)를 해결하기 위해, `file_vectors` 테이블을 조회하여 `vector_id`를 `file_path`로 변환하는 로직 추가.

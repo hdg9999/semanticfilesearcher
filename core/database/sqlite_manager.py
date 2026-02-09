@@ -57,6 +57,16 @@ class DatabaseManager:
                     PRIMARY KEY(file_id, tag_id)
                 )
             """)
+
+            # FileVectors table (Vector DB ID mapping)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS file_vectors (
+                    id INTEGER PRIMARY KEY, -- This will be the Vector DB ID
+                    file_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(file_id) REFERENCES files(id) ON DELETE CASCADE
+                )
+            """)
             conn.commit()
 
     def upsert_file(self, file_path, last_modified):
@@ -263,3 +273,59 @@ class DatabaseManager:
             if row:
                 return {"last_modified": row[0]}
             return None
+
+    def allocate_vector_id(self, file_id):
+        """Allocates a new Vector ID for the given file."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO file_vectors (file_id) VALUES (?)", (file_id,))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_vector_ids(self, file_id):
+        """Retrieves all vector IDs associated with a file."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM file_vectors WHERE file_id = ?", (file_id,))
+            return [row[0] for row in cursor.fetchall()]
+
+    def delete_vector_ids(self, vector_ids):
+        """Deletes specific vector IDs from the mapping table."""
+        if not vector_ids:
+            return
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            placeholders = ",".join(["?"] * len(vector_ids))
+            cursor.execute(f"DELETE FROM file_vectors WHERE id IN ({placeholders})", vector_ids)
+            conn.commit()
+
+    def get_file_paths_by_vector_ids(self, vector_ids):
+        """Retrieves file paths for a given list of vector IDs.
+        Returns a dict: {vector_id: file_path}
+        """
+        if not vector_ids:
+            return {}
+            
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            placeholders = ",".join(["?"] * len(vector_ids))
+            query = f"""
+                SELECT fv.id, f.file_path 
+                FROM file_vectors fv
+                JOIN files f ON fv.file_id = f.id
+                WHERE fv.id IN ({placeholders})
+            """
+            cursor.execute(query, vector_ids)
+            
+            result = {}
+            for row in cursor.fetchall():
+                result[row[0]] = row[1]
+            return result
+
+    def get_file_id(self, file_path):
+        """Retrieves file ID for a given path."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM files WHERE file_path = ?", (file_path,))
+            row = cursor.fetchone()
+            return row[0] if row else None
