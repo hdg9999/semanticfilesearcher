@@ -20,3 +20,4 @@ config.json
 *.db
 *.faiss
 *.faiss.meta
+*.lance

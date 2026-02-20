@@ -21,7 +21,7 @@ class SemanticIndexer:
         # 1. 초기화
         self.embedding = QwenEmbeddingAdapter()
         self.db = DatabaseManager(os.path.join(data_dir, "metadata.db"))
-        self.vector_db = VectorDBManager(self.embedding.dimension, os.path.join(data_dir, "vector.faiss"))
+        self.vector_db = VectorDBManager(self.embedding.dimension, os.path.join(data_dir, "lancedb"))
         
         # 2. LLM 태거 설정 
         self._init_tagger()

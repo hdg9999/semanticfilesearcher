@@ -257,3 +257,7 @@
 - **Torch GPU**: `torch 2.10.0+cu130` 설치 완료 (RTX 5090 감지).
 - **Faiss**: Windows/Python 3.13 환경에서 `faiss-gpu` 패키지(PyPI) 미지원으로 인해 `faiss-cpu_1.13.2`로 대체 설치. (기능 동작 가능, GPU 가속 불가)
 - **pyproject.toml**: `cpu`, `gpu` optional dependencies 분리.
+
+## [2026-02-21] LanceDB 마이그레이션 및 OpenSSL 버그 픽스
+- **VectorDB 교체**: FAISS에서 LanceDB로 성공적으로 마이그레이션 스크립트 실행 및 교체 완료 (troubleshooting.md 확인 및 implementation_plan.md 작성 포함)
+
