@@ -85,19 +85,38 @@ class FileScanner:
 
         if should_process:
             # 1. 텍스트/이미지 추출 및 임베딩 생성
-            embedding = None
+            embeddingsList = []
             if self._is_supported(ext, 'text') or self._is_supported(ext, 'document'):
                 text = self.extract_text(file_path)
                 if text:
-                    embedding = self.embedding_adapter.encode_text(text[:5000]) # 상위 5000자만 우선 처리
+                    from core.indexing.chunker import TextChunker
+                    chunker = TextChunker()
+                    chunks = chunker.split_text(text)
+                    
+                    if chunks:
+                        # 배치 단위 처리를 통해 VRAM 초과 방지
+                        batch_size = 8
+                        for i in range(0, len(chunks), batch_size):
+                            batch = chunks[i:i+batch_size]
+                            try:
+                                emb = self.embedding_adapter.encode_text(batch)
+                                embeddingsList.extend(emb)
+                            except Exception as e:
+                                print(f"Error encoding text batch for {file_path}: {e}")
             elif self._is_supported(ext, 'image'):
-                embedding = self.embedding_adapter.encode_image(file_path)
+                try:
+                    emb = self.embedding_adapter.encode_image(file_path)
+                    if emb is not None and len(emb) > 0:
+                        embeddingsList.extend(emb)
+                except Exception as e:
+                    print(f"Error encoding image {file_path}: {e}")
     
             # 2. DB 업데이트: 항상 수행 (메타데이터/파일명 검색 등)
             file_id = self.db_manager.upsert_file(file_path, last_modified)
             
             # 3. Vector DB 업데이트
-            if embedding is not None and self.vector_db_manager:
+            if len(embeddingsList) > 0 and self.vector_db_manager:
+                import numpy as np
                 # 3-1. 기존 벡터 삭제 (파일 수정 시)
                 old_vector_ids = self.db_manager.get_vector_ids(file_id)
                 if old_vector_ids:
@@ -105,12 +124,13 @@ class FileScanner:
                     self.db_manager.delete_vector_ids(old_vector_ids)
 
                 # 3-2. 새 벡터 ID 발급
-                new_vector_id = self.db_manager.allocate_vector_id(file_id)
+                new_vector_ids = []
+                for _ in range(len(embeddingsList)):
+                    new_vector_ids.append(self.db_manager.allocate_vector_id(file_id))
                 
                 # 3-3. Vector DB에 추가
-                # add_vectors expects list of vectors and list of IDs
-                self.vector_db_manager.add_vectors(embedding, [new_vector_id])
-                print(f"Indexed (with embedding): {file_path} (ID: {new_vector_id})")
+                self.vector_db_manager.add_vectors(np.array(embeddingsList), new_vector_ids)
+                print(f"Indexed (with {len(new_vector_ids)} embeddings): {file_path}")
             else:
                 print(f"Indexed (metadata only): {file_path}")
 

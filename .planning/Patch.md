@@ -258,6 +258,43 @@
 - **Faiss**: Windows/Python 3.13 환경에서 `faiss-gpu` 패키지(PyPI) 미지원으로 인해 `faiss-cpu_1.13.2`로 대체 설치. (기능 동작 가능, GPU 가속 불가)
 - **pyproject.toml**: `cpu`, `gpu` optional dependencies 분리.
 
+## [2026-02-21] 브라우저 직접 다운로드 시 파일 인덱싱 누락 버그 수정
+- **버그 해결**: 브라우저 다운로드 과정에서 일시적으로 생성되는 파일(`crdownload` 등)의 이름 변경 이벤트 누락 및 매우 짧은 시간 내의 파일 삭제 후 재생성 처리 중 덮어쓰기가 안되는 문제 개선
+- **세부 조치**:
+    - `core/indexing/monitor.py`: 파일 이름 변경을 감지하는 `on_moved` 이벤트 핸들러 추가하여 다운로드 후 확장자 변경에 따른 원본 파일 생성 감지 보완
+    - `core/indexing/queue_manager.py`: 삭제 대기 큐에 있던 파일에 대해 다시 처리 요청(업데이트)이 올 경우, 해당 파일이 실제 OS 상에 존재한다면 업데이트 작업을 삭제 작업으로 덮어쓰지 않고 우선적으로 수행하도록 로직 수정
+    - `core/indexer.py`: 이벤트 과부하 방지를 위해 워치독 단계에서 다운로드 임시 파일 확장자(`.crdownload`, `.part`, `.tmp`)를 무시하도록 필터링 로직 추가
+
 ## [2026-02-21] LanceDB 마이그레이션 및 OpenSSL 버그 픽스
 - **VectorDB 교체**: FAISS에서 LanceDB로 성공적으로 마이그레이션 스크립트 실행 및 교체 완료 (troubleshooting.md 확인 및 implementation_plan.md 작성 포함)
+
+## [2026-02-21] 임베딩 로직 고도화 및 품질 개선
+- **텍스트 청킹(Chunking) 유틸리티 도입**:
+    - `core/indexing/chunker.py`: `TextChunker`를 구현하여 긴 텍스트(문서, 소스코드 등)를 재귀적으로 분할(최대 길이에 맞춤). 컨텍스트 길이 초과 문제 해결.
+- **다중 임베딩 벡터 저장 지원**:
+    - `core/indexing/scanner.py`: 파일 하나당 다수의 청크가 생성될 때 다수의 벡터를 추출하여 배치 단위로 VectorDB에 인덱싱하도록 개선 (`get_vector_ids` 및 다중 삭제 지원).
+- **실제 이미지 멀티모달 프롬프트 적용 (Mocking 제거)**:
+    - `core/embedding/qwen_adapter.py`: 이미지 임베딩 요청 시 무작위 텐서(`np.random.randn`)를 반환하던 임시 코드를 삭제하고, `AutoProcessor` 및 `model.get_image_features`를 활용한 실제 추론 로직으로 교체.
+
+## [2026-02-22] 이미지 임베딩 성능 및 검색 품질 검증
+- **문제 확인**: '강아지' 검색 시 '자동차/사람' 관련 이미지가 상위에 노출되는 등 이미지 검색 품질이 저하되는 현상 조사.
+- **원인 분석**: 애플리케이션의 정렬 로직(LanceDB 코사인 유사도 점수 내림차순 정렬)은 확인 결과 정상적으로 구동 중임. 실제 원인은 현재 사용중인 이미지 임베딩 모델(`Qwen/Qwen3-VL-Embedding-2B`)이 생성한 텍스트-이미지 유사도 추출 점수에 노이즈가 심하고 직교(-0.05 ~ 0.03)에 가까운 값으로 출력되어 랭킹이 반대로 나타나는 모델 성능/추출 방식의 한계로 확인.
+- **결과 및 조치**: 원인 분석 결과를 문서(`troubleshooting.md`)에 정리 및 공유 완료. 현재 소스코드 상에서의 정렬 버그는 없으며, 사용자가 직접 임베딩 품질 테스트 및 문제 상황을 확인할 수 있도록 `test_embedding.py` 스크립트를 작성하여 전달.
+- **[추가 조치] 8B 모델 및 LanceDB 연동 재검증 (1차 실패)**:
+    - **조치**: 모델 차원을 4096으로 상향(`Qwen/Qwen3-VL-Embedding-8B` 적용)하여 `qwen_adapter.py` 업데이트 및 DB 매핑 개선 (`vector_db.search` 이용).
+    - **결과 확인**: 초기 시도에서는 여전히 이미지-텍스트 유사도 점수가 낮게 나왔음.
+- **[최종 해결] Qwen-VL 공식 지원 포맷팅 및 버그 픽스 적용**:
+    - **원인 분석**:
+        1. 첫째, 기존 코드에서는 `test_embedding.py` 등 내부 구동 중 `transformers` 최신 패키지 버그(`video_processing_auto` 내 NoneType 버그)와 `torchvision` 미설치로 인해 `AutoProcessor`가 작동하지 않고 조용하게 실패(Fail)하여 무작위 가짜 벡터(Mock data: `np.random.randn`)를 반환하도록 되어 있었습니다. 즉 사용자는 **그동안 랜덤 벡터 해시를 검색**하고 있었습니다.
+        2. 둘째, Qwen3-VL-Embedding 모델은 입력을 무조건 `Chat Template`으로 포맷팅하고, Instruction Prompt(`Represent the user's input.`)를 제공해야 하며, 전체 토큰의 평균이 아닌 **Last Token Pooling** 방식을 써야만 정답 텐서가 추출되는데 이 구조들이 적용되지 않았었습니다.
+        3. 셋째, LanceDB에서 이미 코사인 메트릭 내부 연산 중에 정규화(L2 Normalization)를 진행하므로 파이썬 영역의 강제 L2 처리는 중복이자 오류일 가능성이 있었습니다.
+    - **조치 내역**:
+        - `pyproject.toml` 기반 Python 가상환경 내 `torchvision` 및 `qwen-vl-utils` 수동 구성.
+        - `qwen_adapter.py` 최상단에 `transformers`의 비디오 프로세서 관련 버그 우회를 위한 몽키 패치(Monkey Patch: `vpa.VIDEO_PROCESSOR_MAPPING_NAMES` None 예외 처리) 삽입.
+        - `encode_text` 및 `encode_image` 함수 내에 공식 구현체와 동일하게 `apply_chat_template` 도입, 인스트럭션 프롬프트 강제화 및 `_pooling_last` 메서드 구현.
+        - `vector_db.py` 코사인 유사도 검색 최적화를 위해 불필요한 L2 정규화 로직 제거.
+    - **검증 결과 (성공)**: 코드가 최종 보완된 후 다시 원래 목표였던 `Qwen3-VL-Embedding-2B` 모델로 파라미터를 낮추고 DB를 초기화해 `test_embedding.py` 측정을 진행한 결과, 
+        - `'강아지'` 쿼리 점수가 상위로 `진도개1.jpg(0.35)`, `진도개3.jpg(0.33)`가 등장
+        - `'car'` 쿼리 시 `자동차2.jpg(0.20)`, `XM3 자동차.jpg(0.17)`가 정확히 상단 랭크
+        - 정상적이고 유의미한 시맨틱 유사도 검색이 가벼운 2B 모델에서도 충분히 구현됨을 최종 입증했습니다.
 

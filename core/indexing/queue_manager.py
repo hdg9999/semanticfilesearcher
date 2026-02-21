@@ -41,6 +41,7 @@ class IndexingQueueManager:
             return self.current_task
 
     def add_task(self, path: str, status: str):
+        import os
         with self.lock:
             # Check for existing task for this file
             if path in self.pending_tasks:
@@ -53,9 +54,10 @@ class IndexingQueueManager:
                     # When popping, we check if the item is still in pending_tasks and matches.
                     pass 
                 
-                # Case: Existing delete, New update -> Ignore update (delete takes precedence)
+                # Case: Existing delete, New update -> If file exists, update takes precedence (recreation)
                 elif existing_item.status == "deleted" and status != "deleted":
-                    return
+                    if not os.path.exists(path):
+                        return
 
                 # Case: Same status -> Update timestamp (re-push will happen, old one becomes stale)
             

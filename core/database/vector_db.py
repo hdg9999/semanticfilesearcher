@@ -30,14 +30,10 @@ class VectorDBManager:
         if len(vectors) != len(vector_ids):
             raise ValueError("Values and IDs must have the same length")
         
-        # FAISS와의 호환성을 위해 직접 L2 Normalize (내적용)
-        norms = np.linalg.norm(vectors, axis=1, keepdims=True)
-        norms[norms == 0] = 1 # 0으로 나누기 방지
-        normalized_vectors = vectors / norms
-        
+        # LanceDB는 cosine 메트릭 설정 시 스스로 정규화 후 연산하므로 명시적인 L2 노멀라이즈 제거
         # Lancedb dict array로 삽입
         data = []
-        for vid, vec in zip(vector_ids, normalized_vectors):
+        for vid, vec in zip(vector_ids, vectors):
             data.append({"id": int(vid), "vector": vec.astype('float32').tolist()})
             
         if data:
@@ -47,11 +43,6 @@ class VectorDBManager:
         """가장 유사한 벡터의 ID들을 반환합니다."""
         if query_vector.shape[1] != self.dimension:
             raise ValueError(f"Query vector dimension {query_vector.shape[1]} does not match index dimension {self.dimension}")
-        
-        # Normalize query
-        norm = np.linalg.norm(query_vector)
-        if norm > 0:
-            query_vector = query_vector / norm
             
         # LanceDB 조회 방식: cosine distance를 활용. 
         # 주의: FAISS IP는 코사인 유사도(1에 가까울수록 비슷)를 반환하지만,

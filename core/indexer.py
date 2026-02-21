@@ -279,6 +279,11 @@ class SemanticIndexer:
         if not self.is_monitored(file_path):
             return
 
+        # 무시할 임시 확장자 필터링
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext in ['.crdownload', '.part', '.tmp']:
+            return
+
         # Watchdog 이벤트 -> 우선순위 큐로 전달
         if action in ["created", "modified"]:
             # 단순 읽기 등으로 인한 중복 감지 방지
