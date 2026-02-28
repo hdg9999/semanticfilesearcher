@@ -1,5 +1,5 @@
 import os
-import fitz  # PyMuPDF
+import pdfplumber
 from docx import Document
 from PIL import Image
 from datetime import datetime
@@ -124,8 +124,17 @@ class FileScanner:
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     return f.read()
             elif ext == '.pdf':
-                doc = fitz.open(file_path)
-                return " ".join([page.get_text() for page in doc])
+                try:
+                    with pdfplumber.open(file_path) as pdf:
+                        text = []
+                        for page in pdf.pages:
+                            page_text = page.extract_text()
+                            if page_text:
+                                text.append(page_text)
+                        return " ".join(text)
+                except Exception as e:
+                    print(f"Error reading PDF {file_path} with pdfplumber: {e}")
+                    return ""
             elif ext == '.docx':
                 doc = Document(file_path)
                 return " ".join([p.text for p in doc.paragraphs])

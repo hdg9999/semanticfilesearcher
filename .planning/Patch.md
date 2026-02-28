@@ -313,3 +313,10 @@
 - **태그 창 검색 버그 해결**: 검색어가 입력되지 않고 태그 칩만 있는 상태에서 입력창에서 엔터키를 누를 때 검색이 실행되지 않던 오류(`ui/main_window.py`의 `perform_search` 내 조기 리턴 로직)를 조건부 수행으로 개선하여 수정. 이제 시스템이 상황에 맞게 자동으로 태그 검색 및 안내('태그 검색 중...')를 제공합니다.
     - **태그 전용 검색 시 태그 표시 누락 해결**: `core/indexer.py`의 `search` 메서드에서 검색 문자열 없이 태그로만 조회할 때 태그 정보를 함께 반환하도록 수정하여 검색 결과 UI에 파일 썸네일 우측에 태그 칩이 정상 노출되도록 조치.
 - **태그 중복 출력 버그 해결**: `ui/components/tag_input.py`에서 QCompleter(자동완성)를 이용해 태그를 선택한 뒤 남은 텍스트가 입력 필드에 복사/잔류하던 문제를 QTimer 기반의 비동기 초기화(`clear()`) 로직을 추가하여 깨끗하게 지워지도록 조치완료.
+
+## [2026-02-28] PyMuPDF 라이브러리 교체 (AGPL 라이선스 회피)
+- 빌드 배포를 앞두고, 카피레프트 의무(AGPL 3.0)가 있는 pymupdf(fitz)를 제거함.
+- 텍스트 및 이미지 추출 확장에 유리한 MIT 라이선스 기반의 pdfplumber를 도입함.
+- pyproject.toml, equirements.txt 업데이트 (uv sync 실행완료).
+- core/indexing/scanner.py 파일 내 PDF 텍스트 추출 로직 교체.
+- OPENSOURCE_LICENSES.txt 파일 신규 생성 및 README.md에 참조 문구 추가.

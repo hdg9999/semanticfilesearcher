@@ -1,0 +1,51 @@
+Semantic File Searcher - Open Source Licenses
+
+This software uses the following open source packages and models:
+
+1. Apache License 2.0
+- accelerate
+- google-genai
+- lancedb
+- openai
+- qwen-vl-utils
+- requests
+- transformers
+- sentence-transformers
+- watchdog
+- Model: Qwen/Qwen3-VL-Embedding-2B
+
+2. MIT License
+- pdfplumber
+- pdfminer.six
+- python-docx
+- faiss-cpu / faiss-gpu
+
+3. BSD License
+- torch, torchvision, torchaudio
+
+4. HPND License
+- pillow
+
+========================================================================
+
+Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+[... Apache License 2.0 text ...]
+
+========================================================================
+
+MIT License
+
+[... MIT License text ...]
+
+========================================================================
+
+BSD License
+
+[... BSD License text ...]
+
+========================================================================
