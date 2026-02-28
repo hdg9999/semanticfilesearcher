@@ -288,15 +288,20 @@ class MainWindow(QMainWindow):
             self.perform_search() # 현재 검색어로 다시 그리기
 
     def perform_search(self):
-        query = self.search_input.text()
-        if not query: return
+        query = self.search_input.text().strip()
+        tags = self.tag_input.get_tags()
+        
+        if not query and not tags:
+            return
         
         mode = self.search_mode.currentText()
         exts = [e.strip().lower() for e in self.ext_filter.text().split(",") if e.strip()]
         
-        self.status_label.setText(f"검색 중: {query}...")
+        if query:
+            self.status_label.setText(f"검색 중: {query}...")
+        else:
+            self.status_label.setText("태그 검색 중...")
         
-        tags = self.tag_input.get_tags()
         tag_logic = self.tag_logic.currentText()
         
         results = self.indexer.search(query, mode=mode, extensions=exts, tags=tags, tag_logic=tag_logic)
@@ -307,7 +312,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'path_bar'):
             # os.path.normpath might mess up the display string if it looks like a path, but for simple text it's fine.
             # We bypass set_path's normpath if needed, but let's try using set_path for consistency in breadcrumbs.
-            self.path_bar.set_path(f"'{query}' 검색 결과")
+            if query:
+                self.path_bar.set_path(f"'{query}' 검색 결과")
+            else:
+                self.path_bar.set_path("태그 검색 결과")
         
         # 결과 렌더링
         # 뷰 모드에 따라 컨테이너 및 레이아웃 설정

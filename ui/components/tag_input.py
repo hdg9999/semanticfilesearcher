@@ -248,7 +248,8 @@ class TagInputWidget(QFrame):
         self.flow_layout.addItem(QWidgetItem(self.input_edit))
         
         self.input_edit.setFocus()
-        self.input_edit.clear()
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, self.input_edit.clear)
         
         self.tags_changed.emit(self.tags)
 

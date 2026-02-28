@@ -100,7 +100,12 @@ class SemanticIndexer:
         # 태그가 제공되면 태그 검색 로직 수행 (검색어 없음)
         if tags and not query:
             results = self.db.search_by_tags(tags, condition=tag_logic)
-            return [{"file_path": path, "distance": 0.0} for path in results]
+            ret = [{"file_path": path, "distance": 0.0} for path in results]
+            if ret:
+                tags_map = self.db.get_tags_for_files(results)
+                for res in ret:
+                    res["tags"] = tags_map.get(res["file_path"], [])
+            return ret
 
         # 태그와 검색어가 둘 다 있는 경우 (1-3 요구사항: 검색어 + 태그 필터링)
         # 우선 벡터 검색 후 태그로 필터링 (또는 반대) - 우선 벡터 검색 결과를 가져옴
@@ -108,7 +113,12 @@ class SemanticIndexer:
              # Legacy mode support if any
              if query:
                 results = self.db.search_by_tag(query)
-                return [{"file_path": path, "distance": 0.0} for path in results]
+                ret = [{"file_path": path, "distance": 0.0} for path in results]
+                if ret:
+                    tags_map = self.db.get_tags_for_files(results)
+                    for res in ret:
+                        res["tags"] = tags_map.get(res["file_path"], [])
+                return ret
             
         # 3. 벡터 검색
         query_vec = self.embedding.encode_text(query)
