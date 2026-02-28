@@ -298,3 +298,13 @@
         - `'car'` 쿼리 시 `자동차2.jpg(0.20)`, `XM3 자동차.jpg(0.17)`가 정확히 상단 랭크
         - 정상적이고 유의미한 시맨틱 유사도 검색이 가벼운 2B 모델에서도 충분히 구현됨을 최종 입증했습니다.
 
+## [2026-02-28] 파일 인덱싱 중복 생성 버그 해결
+- **Vector DB 중복 데이터 생성 및 고아 데이터 적재 이슈 완전 수정**:
+    - `core/database/sqlite_manager.py`: `upsert_file` 메서드 내부에서 `INSERT ... ON CONFLICT DO UPDATE` 구문 실행 시, SQLite의 `lastrowid`가 충돌 업데이트 이후 엉뚱한 이전 시점의 ID를 반환하는 버그 발견 및 명시적인 `SELECT id` 조회를 통한 정확한 파일 ID 반환 구현으로 해결.
+    - `core/indexing/scanner.py`: DB 저장 메타데이터 및 OS 타임스탬프 간 변경 감지 로직의 파이썬 객체-문자열 비교 파편화를 방지하고 강건하게 비교하도록 명시적인 `str()` 캐스팅 비교 확정 적용.
+
+## [2026-02-28] 가상환경 실행 오류 수정 및 의존성 추가
+- **증상**: 파이썬 가상환경(`uv` 등)에서 애플리케이션 실행 시 `OPENSSL_Uplink(...): no OPENSSL_Applink` 에러 발생과 함께 즉시 종료되는 현상.
+- **원인**: 사용자의 시스템 환경(AhnLab Safe Transaction 등 보안 프로그램 추정)에서 시스템 전역으로 주입된 `SSLKEYLOGFILE` (예: `\\.\nllMonFltProxy\...`) 환경 변수 때문에, 내부 파이썬 wrapper가 OpenSSL 키 로그를 기록하려다 C 런타임 Applink 심볼이 없어 충돌이 발생한 것.
+- **해결**: `main.py` 실행 최상단에서 `os.environ.pop("SSLKEYLOGFILE", None)`를 호출하여 프로세스 환경 내에서 해당 변수만 제거해 OpenSSL 크래시를 근본적으로 차단함.
+- **추가 수정**: `uv` 환경에서 숨어있던 `torchvision` 모듈 미인식 에러를 확인하고 `uv pip install torchvision`을 통해 의존성 트리를 정상으로 복구하여 앱 구동 성공.

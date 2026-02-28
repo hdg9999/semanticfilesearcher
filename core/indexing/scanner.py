@@ -60,25 +60,8 @@ class FileScanner:
         should_process = True
         if db_metadata:
              stored_modified = db_metadata['last_modified']
-             # If stored_modified is string, parse it.
-             if isinstance(stored_modified, str):
-                 try:
-                    # SQLite default format: "YYYY-MM-DD HH:MM:SS.mmmmmm" or similar
-                    stored_dt = datetime.fromisoformat(stored_modified)
-                    # OR specific format? sqlite3 defaults to "YYYY-MM-DD HH:MM:SS.uuuuuu" usually
-                    # Let's try flexible parsing or string matching.
-                    # Since we are writing `last_modified` (datetime) into DB, 
-                    # check how it's stored. `upsert_file` takes `last_modified`.
-                    pass
-                 except:
-                    pass
-             
-             # Actually, simpler: Let's assume strict string equality if we format it same way,
-             # OR just proceed if not sure. 
-             # But better: Check if file size also changed? (Not stored currently).
-             
-             # Let's proceed with a standard comparison allowing for small drift or string match.
-             # If `stored_modified` == `str(last_modified)`, skip.
+             # 파이썬 sqlite3 모듈에서 datetime 변환 처리가 이뤄질 수 있어 객체/문자열이 섞일 수 있음.
+             # 가장 안전한 방식은 양쪽 모두 문자열로 변환하여 밀리초 단위까지 동일한지 비교하는 것.
              if str(stored_modified) == str(last_modified):
                  should_process = False
                  print(f"Skipped (Unchanged): {file_path}")

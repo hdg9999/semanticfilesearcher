@@ -1,4 +1,5 @@
 import sys, os
+os.environ.pop("SSLKEYLOGFILE", None)  # AhnLab/Banking security OpenSSL Applink crash fix
 from PySide6.QtWidgets import QApplication
 from core.indexer import SemanticIndexer
 from ui.main_window import MainWindow

@@ -82,7 +82,10 @@ class DatabaseManager:
                     indexed_at=CURRENT_TIMESTAMP
             """, (file_path, file_name, extension, last_modified))
             conn.commit()
-            return cursor.lastrowid
+            
+            # lastrowid는 Insert/Update 상태에 따라 값이 다를 수 있으므로 명시적으로 ID 조회
+            cursor.execute("SELECT id FROM files WHERE file_path = ?", (file_path,))
+            return cursor.fetchone()[0]
 
     def add_tag(self, tag_name, color="#007acc"):
         with self._get_connection() as conn:
