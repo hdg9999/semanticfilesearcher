@@ -317,6 +317,23 @@
 ## [2026-02-28] PyMuPDF 라이브러리 교체 (AGPL 라이선스 회피)
 - 빌드 배포를 앞두고, 카피레프트 의무(AGPL 3.0)가 있는 pymupdf(fitz)를 제거함.
 - 텍스트 및 이미지 추출 확장에 유리한 MIT 라이선스 기반의 pdfplumber를 도입함.
-- pyproject.toml, equirements.txt 업데이트 (uv sync 실행완료).
+- pyproject.toml, 
+equirements.txt 업데이트 (uv sync 실행완료).
 - core/indexing/scanner.py 파일 내 PDF 텍스트 추출 로직 교체.
 - OPENSOURCE_LICENSES.txt 파일 신규 생성 및 README.md에 참조 문구 추가.
+
+## [2026-02-28] uv sync로 인한 선택적 종속성(torchvision 등) 누락 오류 수정
+- 이전 단계에서 uv sync 실행 시 --extra cpu 옵션을 누락하여 pyproject.toml에 정의된 선택적 종속성(torchvision, faiss-cpu, torchaudio 등)이 삭제되는 문제가 발생함.
+- uv sync --extra cpu 명령어를 다시 실행하여 삭제된 종속성들을 복구하고 모델 로드 오류를 해결함.
+
+## [2026-02-28] 배포를 위한 빌드 파이프라인(스크립트) 도입
+- GUI 없이 핵심 백엔드 기능(임베딩 로드, DB 처리 등)을 검증하는 자동화 테스트 모듈 (`scripts/test_core_features.py`) 추가.
+- `PyInstaller` 설정 파일 (`SemanticFileSearcher.spec`) 및 Inno Setup 기반 인스톨러 설정(`scripts/installer.iss`) 구성.
+- 의존성 검사, PyInstaller 빌드, Zip 패키징, Inno Setup 빌드 스트림을 한 번에 실행하는 원터치 윈도우 빌드 스크립트(`scripts/build_app.ps1`) 적용 완료.
+
+## [2026-02-28] 빌드 후 발생한 버그 및 권한 이슈 수정
+- **빌드된 실행 파일 아이콘 및 작업표시줄 아이콘 미적용/사이즈 작은 현상 해결**: `icon.png` 내부의 투명 여백을 자르고 해상도별(16x16 ~ 256x256 등)로 패키징한 `icon.ico` 파일을 생성 적용함. PyInstaller `SemanticFileSearcher.spec`와 `installer.iss`가 새로 생성된 ICO 파일을 참조하도록 변경해 윈도우 작업표시줄에서 앱 아이콘이 뚜렷하게 보이도록 수정함.
+- **UI 아이콘(SVG 버튼 등) 미표시 문제 2차 패치**: `ui/style_manager.py`에 PyInstaller의 `_MEIPASS` 환경을 동적으로 감지하고 ui 리소스에 대한 절대 경로를 계산해주는 `get_resource_path()` 유틸 메서드를 추가함. `main_window.py` 와 `path_bar.py`에 존재하던 하드코딩된 상대경로들을 모두 이 메서드로 래핑하도록 고쳐 대기열 및 보기 모드 버튼 아이콘이 보이지 않던 문제를 완전히 해결.
+- **인스톨러/포터블 환경 DB 폴더 적재 권한 이슈 스마트 처리**: `core/indexer.py`의 기본 동작을 스마트 모드로 리팩터링함. 이제 앱 구동 시 실행 파일(`./`) 경로 하위에 쓰기 테스트(`.test_write` 임시 파일 생성/삭제)를 먼저 진행함.
+    - 권한이 긍정될 경우 (보통 포터블 버전): 기존 방식 그대로 실행 폴더 안에 `data` 폴더를 생성하여 구동.
+    - 권한이 부정(PermissionError 오류 발생)될 경우 (보통 `C:\Program Files` 하위에 인스톨러로 설치한 경우): 윈도우 전용 `APPDATA`의 하위 경로로 fallback하여, 읽기 전용 폴더에서의 크래시를 우회하도록 개선 완료.

@@ -12,7 +12,11 @@ class StyleManager:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(StyleManager, cls).__new__(cls)
-            cls._instance.base_path = os.path.dirname(os.path.abspath(__file__))
+            import sys
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                cls._instance.base_path = os.path.join(sys._MEIPASS, "ui")
+            else:
+                cls._instance.base_path = os.path.dirname(os.path.abspath(__file__))
             cls._instance.styles_path = os.path.join(cls._instance.base_path, "resources", "styles")
             cls._instance.current_theme = "dark"
         return cls._instance
@@ -62,6 +66,13 @@ class StyleManager:
 
     def get_current_theme(self):
         return self.current_theme
+
+    def get_resource_path(self, relative_path):
+        """
+        Returns the absolute path to a resource relative to the ui directory.
+        e.g relative_path = "resources/icons/queue.svg"
+        """
+        return os.path.join(self.base_path, relative_path)
 
     def get_icon_suffix(self):
         """

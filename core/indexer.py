@@ -14,6 +14,22 @@ from datetime import datetime
 
 class SemanticIndexer:
     def __init__(self, data_dir="data"):
+        if data_dir == "data":
+            import sys
+            if sys.platform == 'win32' and getattr(sys, 'frozen', False):
+                exe_dir = os.path.dirname(sys.executable)
+                portable_data_dir = os.path.join(exe_dir, "data")
+                try:
+                    os.makedirs(portable_data_dir, exist_ok=True)
+                    test_file = os.path.join(portable_data_dir, ".test_write")
+                    with open(test_file, 'w') as f:
+                        f.write("test")
+                    os.remove(test_file)
+                    data_dir = portable_data_dir # Write access ok, use portable dir
+                except (PermissionError, OSError):
+                    # Fallback to APPDATA for Installed version (C:\Program Files\ is read-only)
+                    base_dir = os.environ.get('APPDATA', os.path.expanduser('~'))
+                    data_dir = os.path.join(base_dir, "SemanticFileSearcher", "data")
         self.data_dir = data_dir
         os.makedirs(data_dir, exist_ok=True)
         self.config = ConfigManager(os.path.join(data_dir, "config.json"))

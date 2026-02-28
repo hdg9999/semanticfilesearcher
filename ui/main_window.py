@@ -23,7 +23,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Semantic File Searcher")
         
         # Load Icon
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png")
+        import sys
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            icon_path = os.path.join(sys._MEIPASS, "assets", "icon.ico")
+        else:
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.ico")
         if os.path.exists(icon_path):
              self.setWindowIcon(QIcon(icon_path))
              
@@ -498,14 +502,14 @@ class MainWindow(QMainWindow):
         suffix = self.style_manager.get_icon_suffix()
         
         # Update Queue Button
-        self.queue_btn.setIcon(QIcon(f"ui/resources/icons/queue{suffix}.svg"))
+        self.queue_btn.setIcon(QIcon(self.style_manager.get_resource_path(f"resources/icons/queue{suffix}.svg")))
         
         # Update View Mode Buttons
-        self.view_list_btn.setIcon(QIcon(f"ui/resources/icons/list_view{suffix}.svg"))
-        self.view_icon_btn.setIcon(QIcon(f"ui/resources/icons/icon_view{suffix}.svg"))
+        self.view_list_btn.setIcon(QIcon(self.style_manager.get_resource_path(f"resources/icons/list_view{suffix}.svg")))
+        self.view_icon_btn.setIcon(QIcon(self.style_manager.get_resource_path(f"resources/icons/icon_view{suffix}.svg")))
         
         # Update Sidebar Toggle Button
-        self.toggle_detail_btn.setIcon(QIcon(f"ui/resources/icons/sidebar_toggle{suffix}.svg"))
+        self.toggle_detail_btn.setIcon(QIcon(self.style_manager.get_resource_path(f"resources/icons/sidebar_toggle{suffix}.svg")))
 
         # Update PathBar Icons
         if hasattr(self, 'path_bar'):

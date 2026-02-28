@@ -65,7 +65,8 @@ class PathBar(QWidget):
 
     def update_icons(self, suffix):
         """Updates icons based on theme."""
-        icon_path = f"ui/resources/icons/refresh{suffix}.svg"
+        from ui.style_manager import StyleManager
+        icon_path = StyleManager().get_resource_path(f"resources/icons/refresh{suffix}.svg")
         if os.path.exists(icon_path):
             self.refresh_btn.setIcon(QIcon(icon_path))
         else:
