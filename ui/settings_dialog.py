@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, 
                              QWidget, QLabel, QLineEdit, QPushButton, QComboBox, 
-                             QFormLayout, QListWidget, QListWidgetItem, QMessageBox, QFileDialog, QSizePolicy)
+                             QFormLayout, QListWidget, QListWidgetItem, QMessageBox, QFileDialog, QSizePolicy, QCheckBox)
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QColor
 
@@ -15,6 +15,7 @@ class SettingsDialog(QDialog):
         self.tabs = QTabWidget()
         
         # 탭 생성
+        self.tabs.addTab(self._create_general_tab(), "환경 설정")
         self.tabs.addTab(self._create_llm_tab(), "LLM 설정")
         self.tabs.addTab(self._create_folder_tab(), "폴더 관리")
         self.tabs.addTab(self._create_tag_tab(), "태그 관리")
@@ -31,6 +32,31 @@ class SettingsDialog(QDialog):
         btn_layout.addWidget(save_btn)
         btn_layout.addWidget(close_btn)
         self.layout.addLayout(btn_layout)
+
+        # Apply component specific style
+        from ui.style_manager import StyleManager
+        self.style_manager = StyleManager()
+        style = self.style_manager.get_component_style("settings_dialog")
+        if style:
+            self.setStyleSheet(self.styleSheet() + "\n" + style)
+
+    def _create_general_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        self.tray_checkbox = QCheckBox("프로그램 종료 시 시스템 트레이로 최소화 (기본: 창 닫기 시 종료)")
+        
+        close_action = self.indexer.config.get_close_action()
+        self.tray_checkbox.setChecked(close_action == "minimize")
+        
+        desc_label = QLabel("체크 시 창 닫기 버튼을 클릭하면 프로그램이 완전히 종료되지 않고\n시스템 트레이 아이콘으로 숨겨집니다.")
+        desc_label.setObjectName("trayDescLabel")
+        
+        layout.addWidget(self.tray_checkbox)
+        layout.addWidget(desc_label)
+        layout.addStretch()
+        
+        return widget
 
     def _create_llm_tab(self):
         widget = QWidget()
@@ -290,6 +316,10 @@ class SettingsDialog(QDialog):
                 QMessageBox.warning(self, "오류", "이름 변경 실패 (중복된 이름 등)")
 
     def accept(self):
+        # 일반 설정 저장
+        close_action = "minimize" if getattr(self, 'tray_checkbox', None) and self.tray_checkbox.isChecked() else "exit"
+        self.indexer.config.set_close_action(close_action)
+
         # LLM 설정 저장
         self.indexer.config.set_llm_config(
             self.llm_provider.currentText(),

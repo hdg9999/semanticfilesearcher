@@ -1,0 +1,6 @@
+/* ui/resources/styles/components/settings_dialog.qss */
+
+/* 시스템 트레이 최소화 설정의 설명 텍스트 스타일 */
+QLabel#trayDescLabel {
+    color: #888888;
+}

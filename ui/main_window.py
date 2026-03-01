@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QListWidget, QLabel, 
                              QFileDialog, QListWidgetItem, QMessageBox, QProgressBar,
-                             QComboBox, QScrollArea, QFrame, QSplitter, QApplication)
+                             QComboBox, QScrollArea, QFrame, QSplitter, QApplication,
+                             QSystemTrayIcon, QMenu, QCheckBox)
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer
 from PySide6.QtGui import QFont, QAction, QDesktopServices, QIcon, QPixmap
 from ui.workers import IndexingWorker
@@ -259,6 +260,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(status_container)
 
         self._create_menu_bar()
+        self._create_tray_icon()
         self.refresh_tag_completer() # Initialize completer
         
         # Apply theme after all UI components are initialized
@@ -413,9 +415,13 @@ class MainWindow(QMainWindow):
 
     def check_initial_indexing(self):
         if not self.indexer.config.get_folders():
-            reply = QMessageBox.question(self, "초기 인덱싱 권장", 
-                                       "다운로드, 문서, 사진 폴더를 인덱싱하시겠습니까?\n내용 검색을 위해 초기 인덱싱이 권장됩니다.",
-                                       QMessageBox.Yes | QMessageBox.No)
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("초기 인덱싱 권장")
+            msg_box.setText("다운로드, 문서, 사진 폴더를 인덱싱하시겠습니까?\n내용 검색을 위해 초기 인덱싱이 권장됩니다.")
+            msg_box.setIcon(QMessageBox.Question)
+            msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg_box.setWindowFlags(msg_box.windowFlags() | Qt.WindowStaysOnTopHint)
+            reply = msg_box.exec()
             
             if reply == QMessageBox.Yes:
                 user_dirs = [
@@ -645,4 +651,64 @@ class MainWindow(QMainWindow):
             self.load_directory(self.current_directory)
         else:
             self.perform_search()
+
+    def _create_tray_icon(self):
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.windowIcon())
+        
+        tray_menu = QMenu(self)
+        
+        show_action = QAction("열기", self)
+        show_action.triggered.connect(self.showNormal)
+        tray_menu.addAction(show_action)
+        
+        exit_action = QAction("종료", self)
+        exit_action.triggered.connect(QApplication.instance().quit)
+        tray_menu.addAction(exit_action)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self._tray_icon_activated)
+        
+        self.tray_icon.show()
+
+    def _tray_icon_activated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.showNormal()
+            self.activateWindow()
+
+    def closeEvent(self, event):
+        action = self.indexer.config.get_close_action()
+        if action == "minimize":
+            self.hide()
+            event.ignore()
+        elif action == "exit":
+            self.tray_icon.hide()
+            event.accept()
+        else:
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("종료 확인")
+            msg_box.setText("창을 닫을 때 프로그램 동작을 선택해 주세요.")
+            
+            btn_minimize = msg_box.addButton("트레이로 최소화", QMessageBox.AcceptRole)
+            btn_exit = msg_box.addButton("프로그램 종료", QMessageBox.RejectRole)
+            msg_box.addButton("취소", QMessageBox.DestructiveRole)
+            
+            cb_remember = QCheckBox("선택한 설정을 기억하고 다시 묻지 않음")
+            msg_box.setCheckBox(cb_remember)
+            
+            msg_box.exec()
+            
+            clicked_btn = msg_box.clickedButton()
+            if clicked_btn == btn_minimize:
+                if cb_remember.isChecked():
+                    self.indexer.config.set_close_action("minimize")
+                self.hide()
+                event.ignore()
+            elif clicked_btn == btn_exit:
+                if cb_remember.isChecked():
+                    self.indexer.config.set_close_action("exit")
+                self.tray_icon.hide()
+                event.accept()
+            else:
+                event.ignore()
 

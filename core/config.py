@@ -12,7 +12,8 @@ class ConfigManager:
                 "model": "llama3",
                 "api_key": ""
             },
-            "view_mode": "list"
+            "view_mode": "list",
+            "close_action": "ask"  # "ask", "minimize", "exit"
         }
         self.load()
 
@@ -71,4 +72,10 @@ class ConfigManager:
             "api_key": api_key,
             "base_url": base_url
         }
-        self.save()
+    def get_close_action(self):
+        return self.config.get("close_action", "ask")
+
+    def set_close_action(self, action):
+        if action in ["ask", "minimize", "exit"]:
+            self.config["close_action"] = action
+            self.save()

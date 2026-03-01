@@ -362,3 +362,24 @@
             - 검증 결과: 애플리케이션의 검색 및 정렬 로직(`vector_db.py`, `indexer.py`)은 정상이나, 모델 자체의 임베딩 정합성 부족으로 최종 검색 결과에 노이즈가 발생하고 있음.
         3) 1,2번의 결과를 종합하여 소스코드 레벨에서 보완할 부분이 있으면 개선 필요. [x]
             - 조치: 모델 문제가 아니라 `qwen_adapter.py` 내 `transformers/torchvision` 버그로 인한 무작위 가짜 벡터 문제, 미구현된 `apply_chat_template`, 시스템 `instruction`, `Last Token Pooling` 누락 등의 종합 오류였음을 확인하여 해결 완료. 원래 2B 파라미터 환경에서도 100% 정상 작동함을 테스트 (`test_embedding.py`) 및 조치 이력(`Patch.md`)에 저장함.
+
+### 빌드 후 확인된 이슈
+1) 공통
+- [x] assets\icon.png 을 빌드된 실행파일의 아이콘 및 제목표시줄 좌상단, 작업표시줄에 표시되도록 반영해야하나 빌드 된 프로그램을 확인해보니 적용되어있지 않음.
+- [x] 각종 UI 아이콘들이 안보임. (검색결과 보기 버튼, 대기열 아이콘 버튼)
+- [x] 변환된 아이콘 사이즈가 너무 작음.
+
+2) 포터블 버전 실행시 전용 이슈
+- [x] 포터블 버전에서는 기존처럼 data폴더 안에 db파일들이 생성될 수 있도록 방안 검토.(포터블 버전도 APPDATA에 db파일을 생성해버리면 포터블 버전의 장점이 퇴색됨.)
+
+3) 인스톨러로 설치한 버전 실행 시 전용 이슈
+- [x] 설치 후 실행 시 액세스 거부 오류 발생. db 관련 파일이 설치 경로 내 'data' 폴더에 생성되는데, 기본적으로 프로그램 설치하는데 많이 사용하는 C:\Program Files 폴더는 시스템 폴더로 일반 사용자가 쓰기 권한이 없어서 발생하는 것으로 추정됨. 해결 방안 필요.
+    - (오류 내용)
+    ```
+    Traceback (most recent call last):
+      File "main.py", line 32, in <module>
+      File "main.py", line 11, in main
+      File "core\indexer.py", line 18, in __init__
+      File "<frozen os>", line 228, in makedirs
+    PermissionError: [WinError 5] 액세스가 거부되었습니다: 'data'
+    ```
