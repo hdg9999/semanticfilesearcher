@@ -1,6 +1,6 @@
 [Setup]
 AppName=Semantic File Searcher
-AppVersion=0.1.0
+AppVersion=0.1.1
 DefaultDirName={autopf}\SemanticFileSearcher
 DefaultGroupName=Semantic File Searcher
 UninstallDisplayIcon={app}\SemanticFileSearcher.exe

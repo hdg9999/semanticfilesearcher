@@ -21,8 +21,9 @@ class TestTagManager(unittest.TestCase):
         self.db.add_tag("TestTag1")
         self.db.add_tag("TestTag2")
         tags = self.db.get_all_tags()
-        self.assertIn("TestTag1", tags)
-        self.assertIn("TestTag2", tags)
+        tag_names = [t[0] for t in tags]
+        self.assertIn("TestTag1", tag_names)
+        self.assertIn("TestTag2", tag_names)
         self.assertEqual(len(tags), 2)
 
     def test_link_file_tag(self):
@@ -59,8 +60,9 @@ class TestTagManager(unittest.TestCase):
         self.db.delete_tag("DeleteMe")
         
         tags = self.db.get_all_tags()
-        self.assertNotIn("DeleteMe", tags)
-        self.assertIn("KeepMe", tags)
+        tag_names = [t[0] for t in tags]
+        self.assertNotIn("DeleteMe", tag_names)
+        self.assertIn("KeepMe", tag_names)
 
     def test_rename_tag(self):
         self.db.add_tag("OldName")
@@ -68,8 +70,9 @@ class TestTagManager(unittest.TestCase):
         
         self.assertTrue(success)
         tags = self.db.get_all_tags()
-        self.assertIn("NewName", tags)
-        self.assertNotIn("OldName", tags)
+        tag_names = [t[0] for t in tags]
+        self.assertIn("NewName", tag_names)
+        self.assertNotIn("OldName", tag_names)
 
 if __name__ == '__main__':
     unittest.main()

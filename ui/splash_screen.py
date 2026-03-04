@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QPixmap, QFont, QPainter, QPainterPath
 
 class SplashScreen(QWidget):
-    def __init__(self, image_path: str, version: str = "Version 0.1.0 (Beta Development Build)"):
+    def __init__(self, image_path: str, version: str = "Version 0.1.1 (Beta Development Build)"):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SplashScreen)
         self.setAttribute(Qt.WA_TranslucentBackground)

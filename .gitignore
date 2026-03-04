@@ -21,3 +21,5 @@ config.json
 *.faiss
 *.faiss.meta
 *.lance
+
+tmp_*
