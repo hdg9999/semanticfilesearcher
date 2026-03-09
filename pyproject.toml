@@ -28,7 +28,6 @@ cpu = [
     "torchvision>=0.25.0",
 ]
 gpu = [
-    "faiss-gpu-cu12>=1.13.2",
     "torch>=2.10.0",
     "torchaudio>=2.10.0",
     "torchvision>=0.25.0",
@@ -48,20 +47,25 @@ url = "https://pypi.org/simple"
 default = true
 
 [[tool.uv.index]]
-name = "pytorch-cu126"
-url = "https://download.pytorch.org/whl/cu126"
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.uv.sources]
 torch = [
-    { index = "pytorch-cu126", extra = "gpu" },
+    { index = "pytorch-cu128", extra = "gpu" },
     { index = "pypi", extra = "cpu" },
 ]
 torchaudio = [
-    { index = "pytorch-cu126", extra = "gpu" },
+    { index = "pytorch-cu128", extra = "gpu" },
     { index = "pypi", extra = "cpu" },
 ]
 torchvision = [
-    { index = "pytorch-cu126", extra = "gpu" },
+    { index = "pytorch-cu128", extra = "gpu" },
     { index = "pypi", extra = "cpu" },
+]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.19.0",
 ]
